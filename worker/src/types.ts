@@ -18,16 +18,31 @@ export interface Agent {
 
 export interface Message {
   id: string;
+  conversation_id: string;  // groups messages into threads
   sender: string;
-  recipient: string;
+  recipient?: string;       // deprecated, kept for backwards compat
+  recipients: string[];     // supports multiple recipients
   encrypted_payload: string;
   created_at: number;
   read_at?: number;
   expires_at: number;
 }
 
-export interface InboxIndex {
+export interface Conversation {
+  id: string;
+  participants: string[];
+  last_message_at: number;
+  last_preview: string;     // truncated last message for list view
+  message_count: number;
+}
+
+export interface ConversationMessages {
   message_ids: string[];
+}
+
+export interface InboxIndex {
+  message_ids?: string[];         // legacy format
+  conversation_ids?: string[];    // new format
 }
 
 export interface AgentListEntry {
