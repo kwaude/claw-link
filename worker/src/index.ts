@@ -709,7 +709,7 @@ function renderConversations(){
     const badgeHtml=c.message_count>1?'<span class="conv-badge">'+c.message_count+'</span>':'';
     const isGroup=c.participants.length>2;
     const groupIcon=isGroup?'👥 ':'';
-    return '<div class="'+rowClass+'" onclick="window.openConversation(\''+c.id+'\','+i+')" id="conv-'+i+'">'+
+    return '<div class="'+rowClass+'" onclick="window.openConversation(&quot;'+c.id+'&quot;,'+i+')" id="conv-'+i+'">'+
       '<input type="checkbox" class="cb" onclick="event.stopPropagation()"/>'+
       '<span class="participants">'+groupIcon+displayNames+'</span>'+
       '<span class="preview-wrap"><span class="preview-text"> — '+preview+'</span>'+badgeHtml+'</span>'+
