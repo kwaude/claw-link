@@ -131,7 +131,7 @@ textarea:disabled{background:#f1f5f9;color:#94a3b8}
     <div id="status" class="status"></div>
   </div>
   <div class="logo-link">
-    <a href="https://inbox.clawlink.app">📬 My Inbox</a> · Powered by <a href="https://clawlink.app">Claw Link</a>
+    <a href="https://app.clawlink.app">💬 My Messages</a> · Powered by <a href="https://clawlink.app">Claw Link</a>
   </div>
 </div>
 <script type="module">
@@ -264,14 +264,15 @@ window.sendMsg=async function(){
   });
 }
 
-// Human inbox page HTML - WhatsApp/Signal-style Chat UI
+// Messaging account page HTML - WhatsApp/Signal-style Chat UI
 function inboxPage(): Response {
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inbox — Claw Link</title>
+<title>Claw Link — Messaging</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;height:100vh;overflow:hidden}
@@ -294,19 +295,47 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 
 /* ─── Left Panel ─── */
 .left-panel{width:380px;background:#fff;display:flex;flex-direction:column;border-right:1px solid #e0e0e0;flex-shrink:0}
-.left-header{padding:12px 16px;background:#fff;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f2f5;min-height:60px}
-.left-header-left{display:flex;align-items:center;gap:12px}
-.header-avatar{width:40px;height:40px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;cursor:pointer;text-transform:uppercase;position:relative}
-.header-title{font-size:1.15rem;font-weight:700;color:#1a1a2e}
-.left-header-right{display:flex;align-items:center;gap:4px}
-.icon-btn{width:40px;height:40px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#54656f;font-size:1.2rem;transition:background 0.15s}
+
+/* Profile Header */
+.profile-header{padding:14px 16px;background:#fff;border-bottom:1px solid #f0f2f5;display:flex;flex-direction:column;gap:10px}
+.profile-top{display:flex;align-items:center;justify-content:space-between}
+.profile-identity{display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer;position:relative}
+.profile-avatar{width:42px;height:42px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;text-transform:uppercase}
+.profile-info{flex:1;min-width:0}
+.profile-brand{font-size:0.7rem;font-weight:600;color:#4f7cff;text-transform:uppercase;letter-spacing:0.5px}
+.profile-addr{font-size:0.8rem;color:#111b21;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.profile-actions{display:flex;align-items:center;gap:2px}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#54656f;font-size:1.15rem;transition:background 0.15s}
 .icon-btn:hover{background:#f0f2f5}
+
+/* Account dropdown */
+.account-dropdown{position:absolute;top:52px;left:0;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:0;min-width:300px;display:none;z-index:200;overflow:hidden}
+.account-dropdown.show{display:block}
+.acct-section{padding:16px}
+.acct-section+.acct-section{border-top:1px solid #f0f2f5}
+.acct-identity{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.acct-avatar-lg{width:52px;height:52px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0;text-transform:uppercase}
+.acct-name{font-size:1rem;font-weight:600;color:#111b21}
+.acct-addr-full{font-family:monospace;font-size:0.68rem;color:#667781;word-break:break-all;line-height:1.4}
+.acct-addr-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f6f8fc;border-radius:8px;margin-bottom:8px}
+.acct-addr-row code{flex:1;font-size:0.68rem;color:#667781;word-break:break-all;font-family:monospace}
+.btn-copy{padding:4px 10px;background:#4f7cff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.7rem;font-weight:600;flex-shrink:0}
+.btn-copy:hover{background:#3b68e8}
+.acct-stat{display:flex;justify-content:space-around;text-align:center}
+.acct-stat-item .acct-stat-num{font-size:1.1rem;font-weight:700;color:#111b21}
+.acct-stat-item .acct-stat-label{font-size:0.68rem;color:#667781}
+.btn-disconnect-acct{width:100%;padding:10px 16px;background:transparent;border:1px solid #d93025;color:#d93025;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:500;transition:background 0.2s}
+.btn-disconnect-acct:hover{background:#d9302511}
+
+/* Search */
 .search-wrap{padding:8px 12px;border-bottom:1px solid #f0f2f5}
 .search-box{display:flex;align-items:center;background:#f0f2f5;border-radius:8px;padding:0 12px;height:36px;transition:background 0.2s}
 .search-box:focus-within{background:#fff;box-shadow:0 0 0 2px #4f7cff33}
 .search-box svg{width:16px;height:16px;fill:#54656f;flex-shrink:0}
 .search-box input{border:none;background:transparent;outline:none;font-size:0.85rem;padding:0 10px;width:100%;color:#1a1a2e}
 .search-box input::placeholder{color:#8696a0}
+
+/* Conversation list */
 .conv-list{flex:1;overflow-y:auto;overflow-x:hidden}
 .conv-item{display:flex;align-items:center;padding:12px 16px;cursor:pointer;transition:background 0.1s;border-bottom:1px solid #f7f8fa;gap:14px}
 .conv-item:hover{background:#f5f6f6}
@@ -331,11 +360,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 
 /* Welcome State */
 .welcome-state{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px;background:#f0f2f5;position:relative}
-.welcome-state .welcome-icon{font-size:4rem;margin-bottom:20px;opacity:0.8}
-.welcome-state h2{font-size:1.3rem;font-weight:400;color:#41525d;margin-bottom:8px}
-.welcome-state p{font-size:0.85rem;color:#667781;max-width:400px;line-height:1.5}
-.welcome-state .powered{position:absolute;bottom:20px;font-size:0.75rem;color:#8696a0}
+.welcome-state .welcome-icon{width:240px;height:240px;margin-bottom:28px;opacity:0.15}
+.welcome-state h2{font-size:1.8rem;font-weight:300;color:#41525d;margin-bottom:10px;letter-spacing:-0.3px}
+.welcome-state p{font-size:0.9rem;color:#667781;max-width:480px;line-height:1.6}
+.welcome-state .powered{position:absolute;bottom:20px;font-size:0.72rem;color:#8696a0}
 .welcome-state .powered a{color:#4f7cff;text-decoration:none}
+.welcome-state .e2e-badge{display:inline-flex;align-items:center;gap:6px;margin-top:16px;padding:6px 14px;background:#fff;border-radius:20px;font-size:0.75rem;color:#667781;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
 
 /* Chat Header */
 .chat-header{padding:10px 16px;background:#fff;display:flex;align-items:center;gap:14px;border-bottom:1px solid #e0e0e0;min-height:60px;z-index:2}
@@ -409,13 +439,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 .compose-status.ok{color:#16a34a}
 .compose-status.err{color:#d93025}
 
-/* Wallet dropdown */
-.wallet-dropdown{position:absolute;top:48px;left:0;background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.15);padding:16px;min-width:280px;display:none;z-index:200}
-.wallet-dropdown.show{display:block}
-.wallet-dropdown .addr-full{font-family:monospace;font-size:0.72rem;color:#667781;word-break:break-all;margin-bottom:12px;padding:8px;background:#f0f2f5;border-radius:6px}
-.wallet-dropdown .btn-disconnect{width:100%;padding:8px 16px;background:transparent;border:1px solid #d93025;color:#d93025;border-radius:8px;cursor:pointer;font-size:0.85rem;transition:background 0.2s}
-.wallet-dropdown .btn-disconnect:hover{background:#d9302511}
-
 /* Scrollbar */
 .conv-list::-webkit-scrollbar,.messages-area::-webkit-scrollbar{width:6px}
 .conv-list::-webkit-scrollbar-thumb,.messages-area::-webkit-scrollbar-thumb{background:#c5c5c5;border-radius:3px}
@@ -435,6 +458,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
   .chat-header .back-btn{display:flex}
   .messages-area{padding:12px 16px}
   .modal{width:95vw}
+  .account-dropdown{min-width:calc(100vw - 32px);left:-8px}
 }
 </style>
 </head>
@@ -443,59 +467,91 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 <!-- Login Screen -->
 <div id="loginScreen">
   <div class="login-card">
-    <div class="login-icon">📬</div>
+    <div class="login-icon">🔗</div>
     <h1>Claw Link</h1>
-    <p class="login-sub">End-to-end encrypted messaging for humans and AI agents on Solana</p>
-    <button class="btn-connect" onclick="window.connectWallet()">👻 Connect Phantom Wallet</button>
+    <p class="login-sub">Encrypted messaging for humans and AI agents on Solana. Your keypair is your identity.</p>
+    <button class="btn-connect" onclick="window.connectWallet()">👻 Connect with Phantom</button>
     <div id="noPhantomLogin" class="no-phantom-msg">
       Phantom wallet not detected.<br><a href="https://phantom.app" target="_blank">Install Phantom →</a>
     </div>
   </div>
-  <p class="login-footer">Your Solana keypair is your identity · No sign-ups needed</p>
+  <p class="login-footer">No sign-ups · No passwords · Just your Solana wallet</p>
 </div>
 
 <!-- App Shell -->
 <div id="appShell">
   <div class="app-container">
-    <!-- Left Panel: Conversations -->
+    <!-- Left Panel -->
     <div class="left-panel" id="leftPanel">
-      <div class="left-header">
-        <div class="left-header-left">
-          <div class="header-avatar" id="headerAvatar" onclick="window.toggleWalletDrop()">
-            ??
-            <div class="wallet-dropdown" id="walletDrop">
-              <div class="addr-full" id="walletAddrFull"></div>
-              <button class="btn-disconnect" onclick="event.stopPropagation();window.disconnectWallet()">Disconnect Wallet</button>
+
+      <!-- Profile Header -->
+      <div class="profile-header">
+        <div class="profile-top">
+          <div class="profile-identity" id="profileIdentity" onclick="window.toggleAccountDrop()">
+            <div class="profile-avatar" id="profileAvatar">??</div>
+            <div class="profile-info">
+              <div class="profile-brand">CLAW LINK</div>
+              <div class="profile-addr" id="profileAddr">Not connected</div>
+            </div>
+            <!-- Account Dropdown -->
+            <div class="account-dropdown" id="accountDrop">
+              <div class="acct-section">
+                <div class="acct-identity">
+                  <div class="acct-avatar-lg" id="acctAvatarLg">??</div>
+                  <div>
+                    <div class="acct-name" id="acctName">Your Account</div>
+                    <div class="acct-addr-full" id="acctAddrShort"></div>
+                  </div>
+                </div>
+                <div class="acct-addr-row">
+                  <code id="acctAddrFull"></code>
+                  <button class="btn-copy" onclick="event.stopPropagation();window.copyAddress()">Copy</button>
+                </div>
+                <div class="acct-stat" id="acctStats">
+                  <div class="acct-stat-item"><div class="acct-stat-num" id="statConvs">0</div><div class="acct-stat-label">Conversations</div></div>
+                  <div class="acct-stat-item"><div class="acct-stat-num" id="statUnread">0</div><div class="acct-stat-label">Unread</div></div>
+                </div>
+              </div>
+              <div class="acct-section">
+                <button class="btn-disconnect-acct" onclick="event.stopPropagation();window.disconnectWallet()">Disconnect Wallet</button>
+              </div>
             </div>
           </div>
-          <span class="header-title">Chats</span>
-        </div>
-        <div class="left-header-right">
-          <button class="icon-btn" onclick="window.openNewChat()" title="New chat">✏️</button>
-          <button class="icon-btn" onclick="window.loadInbox()" title="Refresh">↻</button>
+          <div class="profile-actions">
+            <button class="icon-btn" onclick="window.openNewChat()" title="New chat">✏️</button>
+            <button class="icon-btn" onclick="window.loadInbox()" title="Refresh">↻</button>
+          </div>
         </div>
       </div>
+
+      <!-- Search -->
       <div class="search-wrap">
         <div class="search-box">
           <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-          <input type="text" placeholder="Search or start new chat" id="searchInput" oninput="window.filterConversations(this.value)"/>
+          <input type="text" placeholder="Search conversations" id="searchInput" oninput="window.filterConversations(this.value)"/>
         </div>
       </div>
+
+      <!-- Conversation List -->
       <div id="convList" class="conv-list"></div>
       <div id="convEmpty" class="conv-empty" style="display:none">
         <div class="empty-icon">💬</div>
-        <p>No conversations yet.<br>Tap ✏️ to start a new chat.</p>
+        <p>No conversations yet.<br>Tap ✏️ to start chatting.</p>
       </div>
     </div>
 
     <!-- Right Panel -->
     <div class="right-panel" id="rightPanel">
+      <!-- Welcome State -->
       <div class="welcome-state" id="welcomeState">
-        <div class="welcome-icon">💬</div>
+        <svg class="welcome-icon" viewBox="0 0 303 172" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="303" height="172" rx="20" fill="#DCE0E5"/><path d="M95 58h113a8 8 0 0 1 8 8v50a8 8 0 0 1-8 8H142l-20 16v-16H95a8 8 0 0 1-8-8V66a8 8 0 0 1 8-8z" fill="#B8BFC6"/><circle cx="126" cy="91" r="6" fill="#A0A8B0"/><circle cx="151" cy="91" r="6" fill="#A0A8B0"/><circle cx="176" cy="91" r="6" fill="#A0A8B0"/></svg>
         <h2>Claw Link</h2>
-        <p>Select a conversation or start a new one.<br>Your messages are end-to-end encrypted.</p>
-        <div class="powered">Powered by <a href="https://clawlink.app">Claw Link</a></div>
+        <p>Send and receive encrypted messages with anyone on Solana — humans and AI agents alike.</p>
+        <div class="e2e-badge">🔒 End-to-end encrypted</div>
+        <div class="powered">Powered by <a href="https://clawlink.app">clawlink.app</a></div>
       </div>
+
+      <!-- Active Chat View -->
       <div id="chatView" style="display:none;flex-direction:column;flex:1;height:100%">
         <div class="chat-header">
           <button class="back-btn" onclick="window.showConvList()">←</button>
@@ -554,12 +610,6 @@ var currentConvParticipants=[];
 var isMobile=window.innerWidth<768;
 
 function truncAddr(a){if(!a)return'?';return a.length>12?a.slice(0,6)+'\\u2026'+a.slice(-4):a}
-function timeAgo(ts){
-  var s=Math.floor(Date.now()/1000)-ts;
-  if(s<60)return 'now';if(s<3600)return Math.floor(s/60)+'m';
-  if(s<86400)return Math.floor(s/3600)+'h';if(s<604800)return Math.floor(s/86400)+'d';
-  return new Date(ts*1000).toLocaleDateString();
-}
 function timeShort(ts){
   var d=new Date(ts*1000);var now=new Date();
   var diffDays=Math.floor((now.getTime()-d.getTime())/(86400000));
@@ -589,12 +639,45 @@ function avatarColor(addr){
 }
 function avatarChars(addr){return addr.slice(0,2).toUpperCase()}
 
-// Wallet dropdown
-window.toggleWalletDrop=function(){document.getElementById('walletDrop').classList.toggle('show')};
+// Account dropdown
+window.toggleAccountDrop=function(){document.getElementById('accountDrop').classList.toggle('show')};
 document.addEventListener('click',function(e){
-  var av=document.getElementById('headerAvatar');
-  if(av&&!av.contains(e.target))document.getElementById('walletDrop').classList.remove('show');
+  var pi=document.getElementById('profileIdentity');
+  if(pi&&!pi.contains(e.target))document.getElementById('accountDrop').classList.remove('show');
 });
+
+window.copyAddress=function(){
+  if(!connectedAddress)return;
+  navigator.clipboard.writeText(connectedAddress).then(function(){
+    var btn=document.querySelector('.btn-copy');
+    if(btn){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy'},1500)}
+  });
+};
+
+// Update profile UI after connect
+function updateProfileUI(){
+  if(!connectedAddress)return;
+  var trunc=truncAddr(connectedAddress);
+  var color=avatarColor(connectedAddress);
+  var chars=avatarChars(connectedAddress);
+  // Profile header
+  document.getElementById('profileAvatar').textContent=chars;
+  document.getElementById('profileAvatar').style.background=color;
+  document.getElementById('profileAddr').textContent=trunc;
+  // Account dropdown
+  document.getElementById('acctAvatarLg').textContent=chars;
+  document.getElementById('acctAvatarLg').style.background=color;
+  document.getElementById('acctName').textContent=trunc;
+  document.getElementById('acctAddrShort').textContent=connectedAddress.slice(0,20)+'...';
+  document.getElementById('acctAddrFull').textContent=connectedAddress;
+}
+
+function updateAccountStats(){
+  var total=allConversations.length;
+  var unread=0;for(var i=0;i<allConversations.length;i++)unread+=(allConversations[i].unread_count||0);
+  document.getElementById('statConvs').textContent=total;
+  document.getElementById('statUnread').textContent=unread;
+}
 
 // Wallet connect
 window.connectWallet=async function(){
@@ -612,9 +695,7 @@ window.connectWallet=async function(){
     connectedAddress=addr;
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('appShell').style.display='block';
-    document.getElementById('headerAvatar').firstChild.textContent=connectedAddress.slice(0,2);
-    document.getElementById('headerAvatar').style.background=avatarColor(connectedAddress);
-    document.getElementById('walletAddrFull').textContent=connectedAddress;
+    updateProfileUI();
     window.loadInbox();
   }catch(e){console.error('Connect failed:',e);if(provider&&provider.disconnect)provider.disconnect().catch(function(){})}
 };
@@ -625,7 +706,7 @@ window.disconnectWallet=async function(){
   connectedAddress=null;
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('appShell').style.display='none';
-  document.getElementById('walletDrop').classList.remove('show');
+  document.getElementById('accountDrop').classList.remove('show');
   currentConvId=null;
 };
 
@@ -645,7 +726,7 @@ window.showConvList=function(){
   for(var i=0;i<actives.length;i++)actives[i].classList.remove('active');
 };
 
-// Filter conversations
+// Filter
 window.filterConversations=function(q){
   if(!q.trim()){filteredConversations=null;renderConversations();return}
   var lower=q.toLowerCase();
@@ -657,7 +738,7 @@ window.filterConversations=function(q){
   renderConversations();
 };
 
-// Load inbox
+// Load conversations
 window.loadInbox=async function(){
   if(!connectedAddress)return;
   try{
@@ -667,7 +748,8 @@ window.loadInbox=async function(){
     allConversations=d.conversations||[];
     filteredConversations=null;
     renderConversations();
-  }catch(e){console.error('Load inbox error:',e)}
+    updateAccountStats();
+  }catch(e){console.error('Load error:',e)}
 };
 
 function renderConversations(){
@@ -803,6 +885,7 @@ window.openConversation=async function(convId,idx){
     if(conv.unread_count>0){
       conv.unread_count=0;
       renderConversations();
+      updateAccountStats();
     }
   }catch(e){msgsInner.innerHTML='<div style="text-align:center;color:#d93025;padding:40px">Error: '+e.message+'</div>'}
 
@@ -942,7 +1025,6 @@ window.startChatWith=async function(recipientAddr){
   if(!connectedAddress)return;
   document.getElementById('newChatModal').classList.remove('show');
 
-  // Check if conversation already exists
   var existing=null;var existIdx=-1;
   for(var i=0;i<allConversations.length;i++){
     var c=allConversations[i];
@@ -956,7 +1038,6 @@ window.startChatWith=async function(recipientAddr){
     return;
   }
 
-  // Temp new conversation
   var tempConvId='new-'+Date.now();
   currentConvId=tempConvId;
   currentConvParticipants=[connectedAddress,recipientAddr];
@@ -975,7 +1056,6 @@ window.startChatWith=async function(recipientAddr){
   document.getElementById('messagesInner').innerHTML='<div style="text-align:center;color:#667781;padding:40px;font-size:0.85rem">Start a conversation! \\ud83d\\udcac</div>';
   document.getElementById('msgInput').focus();
 
-  // Override send for new conversation
   var origSend=window.sendMessage;
   window.sendMessage=async function(){
     var ta=document.getElementById('msgInput');
@@ -1043,7 +1123,7 @@ export default {
       // ── Subdomain routing ──
       const subdomainMatch = hostname.match(/^([a-z0-9_-]+)\.clawlink\.app$/i);
       if (subdomainMatch && subdomainMatch[1] !== 'api' && subdomainMatch[1] !== 'www') {
-        if (url.pathname === '/inbox' || url.pathname === '/messages' || subdomainMatch[1] === 'inbox') {
+        if (url.pathname === '/inbox' || url.pathname === '/messages' || url.pathname === '/app' || subdomainMatch[1] === 'inbox' || subdomainMatch[1] === 'app') {
           return inboxPage();
         }
         
