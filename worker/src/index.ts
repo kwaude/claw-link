@@ -115,7 +115,6 @@ textarea:disabled{background:#f1f5f9;color:#94a3b8}
       <button class="btn-wallet" id="connectBtn" onclick="window.connectWallet()">
         👻 Connect Phantom Wallet
       </button>
-      <div class="anon-toggle" id="anonToggle" onclick="window.toggleAnon()">or send anonymously →</div>
     </div>
     <div id="walletConnected" style="display:none">
       <div class="wallet-connected">
@@ -200,13 +199,7 @@ window.disconnectWallet=async function(){
   connectedAddress=null;
   document.getElementById('walletNotConnected').style.display='block';
   document.getElementById('walletConnected').style.display='none';
-  if(!isAnon)document.getElementById('msgForm').style.display='none';
-};
-
-window.toggleAnon=function(){
-  isAnon=true;
-  document.getElementById('msgForm').style.display='block';
-  document.getElementById('anonToggle').textContent='📝 Sending as anonymous (unverified)';
+  document.getElementById('msgForm').style.display='none';
 };
 
 window.sendMsg=async function(){
@@ -217,7 +210,8 @@ window.sendMsg=async function(){
   if(!msg){status.className='status err';status.textContent='Please type a message';return}
   btn.disabled=true;btn.textContent='Encrypting...';ta.disabled=true;status.className='status';status.style.display='none';
   try{
-    const senderAddr=connectedAddress||'anonymous-human';
+    if(!connectedAddress){status.className='status err';status.textContent='Connect your wallet first';return}
+    const senderAddr=connectedAddress;
     let signature=null;
     
     // Sign message with wallet if connected
@@ -451,8 +445,20 @@ body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI
 <!-- Sidebar Overlay (mobile) -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="window.toggleSidebar()"></div>
 
-<!-- Layout -->
-<div class="layout">
+<!-- Login Screen (shown when not connected) -->
+<div id="loginScreen" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 64px);margin-top:64px;background:#f6f8fc;flex-direction:column;text-align:center;padding:40px">
+  <div style="font-size:3rem;margin-bottom:16px">📬</div>
+  <h1 style="font-size:1.8rem;font-weight:700;margin-bottom:8px">Claw Link Inbox</h1>
+  <p style="color:#5f6368;font-size:1rem;margin-bottom:32px;max-width:400px">End-to-end encrypted messaging for humans and AI agents on Solana</p>
+  <button class="wallet-btn" style="padding:16px 32px;font-size:1rem;border-radius:12px" onclick="window.connectWallet()">👻 Connect Phantom Wallet</button>
+  <div id="noPhantomLogin" style="margin-top:16px;padding:12px 20px;background:#fffbeb;border:1px solid #d9770666;border-radius:8px;color:#d97706;font-size:0.85rem;display:none">
+    Phantom wallet not detected.<br><a href="https://phantom.app" target="_blank" style="color:#4f7cff">Install Phantom →</a>
+  </div>
+  <p style="margin-top:24px;font-size:0.8rem;color:#94a3b8">Your Solana keypair is your identity. No sign-ups needed.</p>
+</div>
+
+<!-- Layout (hidden until connected) -->
+<div class="layout" id="appLayout" style="display:none">
   <!-- Sidebar -->
   <div class="sidebar" id="sidebar">
     <button class="compose-btn" onclick="window.openCompose()">
@@ -582,7 +588,7 @@ window.filterMessages=function(q){
 
 window.connectWallet=async function(){
   const provider=getProvider();
-  if(!provider?.isPhantom){document.getElementById('noPhantom').style.display='block';return}
+  if(!provider?.isPhantom){var np=document.getElementById('noPhantomLogin');if(np)np.style.display='block';var np2=document.getElementById('noPhantom');if(np2)np2.style.display='block';return}
   try{
     const resp=await provider.connect();
     connectedAddress=resp.publicKey.toString();
@@ -590,6 +596,8 @@ window.connectWallet=async function(){
     document.getElementById('walletConnected').style.display='block';
     document.getElementById('walletAvatar').firstChild.textContent=connectedAddress.slice(0,2);
     document.getElementById('walletAddrFull').textContent=connectedAddress;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('appLayout').style.display='flex';
     document.getElementById('welcomePanel').style.display='none';
     document.getElementById('inboxContent').style.display='flex';
     document.getElementById('refreshBtn').style.display='block';
@@ -603,10 +611,13 @@ window.disconnectWallet=async function(){
   connectedAddress=null;
   document.getElementById('walletNotConnected').style.display='block';
   document.getElementById('walletConnected').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('appLayout').style.display='none';
   document.getElementById('welcomePanel').style.display='flex';
   document.getElementById('inboxContent').style.display='none';
   document.getElementById('refreshBtn').style.display='none';
   document.getElementById('walletDrop').classList.remove('show');
+  document.getElementById('composeModal').classList.remove('show');
 };
 
 window.loadInbox=async function(){
