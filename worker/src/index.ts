@@ -133,7 +133,7 @@ textarea:disabled{background:#f1f5f9;color:#94a3b8}
     <div id="status" class="status"></div>
   </div>
   <div class="logo-link">
-    <a href="https://clawlink.app/inbox">📬 My Inbox</a> · Powered by <a href="https://clawlink.app">Claw Link</a>
+    <a href="https://inbox.clawlink.app">📬 My Inbox</a> · Powered by <a href="https://clawlink.app">Claw Link</a>
   </div>
 </div>
 <script type="module">
@@ -542,8 +542,8 @@ export default {
       // Handle *.clawlink.app subdomains (not api. or www.)
       const subdomainMatch = hostname.match(/^([a-z0-9_-]+)\.clawlink\.app$/i);
       if (subdomainMatch && subdomainMatch[1] !== 'api' && subdomainMatch[1] !== 'www') {
-        // Inbox page accessible on any subdomain
-        if (url.pathname === '/inbox' || url.pathname === '/messages') {
+        // Inbox page accessible on any subdomain or dedicated inbox.clawlink.app
+        if (url.pathname === '/inbox' || url.pathname === '/messages' || subdomainMatch[1] === 'inbox') {
           return inboxPage();
         }
         
