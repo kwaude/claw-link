@@ -155,3 +155,14 @@ export async function deleteMessage(env: Env, id: string): Promise<boolean> {
 export async function getMessage(env: Env, id: string): Promise<Message | null> {
   return await env.MESSAGES.get<Message>(`msg:${id}`, 'json');
 }
+
+// ── Rate limiting ──
+
+export async function checkRateLimit(env: Env, address: string, limit = 10): Promise<{ allowed: boolean; remaining: number }> {
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `ratelimit:${address}:${today}`;
+  const count = parseInt(await env.MESSAGES.get(key) || '0');
+  if (count >= limit) return { allowed: false, remaining: 0 };
+  await env.MESSAGES.put(key, (count + 1).toString(), { expirationTtl: 172800 });
+  return { allowed: true, remaining: limit - count - 1 };
+}
