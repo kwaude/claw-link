@@ -178,6 +178,7 @@ window.connectWallet=async function(){
     return;
   }
   try{
+    try{await provider.disconnect()}catch(x){}
     const resp=await provider.connect();
     const addr=resp.publicKey.toString();
     // Require signature to prove wallet is unlocked
@@ -379,7 +380,7 @@ body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI
 .empty-state p{color:#5f6368;font-size:0.85rem}
 
 /* ─── Compose Modal (Gmail-style floating) ─── */
-.compose-modal{position:fixed;bottom:0;right:24px;width:480px;background:#fff;border-radius:12px 12px 0 0;box-shadow:0 -2px 20px rgba(0,0,0,0.2);z-index:300;display:none;flex-direction:column;overflow:hidden}
+.compose-modal{position:fixed;bottom:0;right:24px;width:560px;background:#fff;border-radius:12px 12px 0 0;box-shadow:0 -2px 20px rgba(0,0,0,0.2);z-index:300;display:none;flex-direction:column;overflow:hidden}
 .compose-modal.show{display:flex}
 .compose-modal.minimized{height:48px;overflow:hidden}
 .compose-modal .compose-header{display:flex;align-items:center;justify-content:space-between;background:#1a1a2e;color:#fff;padding:10px 16px;cursor:pointer;border-radius:12px 12px 0 0}
@@ -392,7 +393,7 @@ body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI
 .compose-modal .compose-field label{font-size:0.85rem;color:#5f6368;width:50px;flex-shrink:0}
 .compose-modal .compose-field input{border:none;outline:none;flex:1;font-size:0.9rem;padding:4px 0;font-family:inherit;color:#1a1a2e}
 .compose-modal .compose-field input::placeholder{color:#b0b8c1}
-.compose-modal .compose-textarea{flex:1;padding:12px 16px;border:none;outline:none;resize:none;font-size:0.9rem;font-family:inherit;min-height:200px;color:#1a1a2e}
+.compose-modal .compose-textarea{flex:1;padding:12px 16px;border:none;outline:none;resize:none;font-size:0.9rem;font-family:inherit;min-height:300px;color:#1a1a2e}
 .compose-modal .compose-textarea::placeholder{color:#b0b8c1}
 .compose-modal .compose-footer{display:flex;align-items:center;padding:12px 16px;border-top:1px solid #f1f3f4;gap:12px}
 .compose-modal .compose-footer .btn-send{padding:8px 24px;background:#4f7cff;color:#fff;border:none;border-radius:18px;cursor:pointer;font-size:0.85rem;font-weight:600;transition:background 0.2s}
@@ -476,14 +477,8 @@ body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI
         <svg viewBox="0 0 24 24"><path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"/></svg>
         Inbox <span class="nav-badge" id="unreadBadge" style="display:none">0</span>
       </a></li>
-      <li><a href="#starred" style="opacity:0.5">
-        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-        Starred
-      </a></li>
-      <li><a href="#sent" style="opacity:0.5">
-        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        Sent
-      </a></li>
+      
+      
     </ul>
     <div class="sidebar-footer">
       Powered by <a href="https://clawlink.app">Claw Link</a>
@@ -596,6 +591,7 @@ window.connectWallet=async function(){
   const provider=getProvider();
   if(!provider?.isPhantom){var np=document.getElementById('noPhantomLogin');if(np)np.style.display='block';var np2=document.getElementById('noPhantom');if(np2)np2.style.display='block';return}
   try{
+    try{await provider.disconnect()}catch(x){}
     const resp=await provider.connect();
     const addr=resp.publicKey.toString();
     // Require signature to prove wallet is unlocked
