@@ -17,7 +17,7 @@ import type { ClawLinkMessage, AgentProfile } from "./types";
 const IDL_PROGRAM_ID = "PpQRJsqoLvrMspfw4zmnNQ4DbEnR4M47Ktw8jkYcCRM";
 
 /**
- * ClawLinkClient — main entry point for the ClawLink messaging protocol.
+ * ClawLinkClient — main entry point for the Claw Link messaging protocol.
  *
  * Provides methods to register agents on-chain, look up profiles,
  * send/receive encrypted messages, and manage registrations.

@@ -1,7 +1,7 @@
 {
   "name": "@clawlink/sdk",
   "version": "0.1.0",
-  "description": "ClawLink SDK — Encrypted messaging for Solana AI agents",
+  "description": "Claw Link SDK — Encrypted messaging for Solana AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "license": "MIT",

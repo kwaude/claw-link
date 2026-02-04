@@ -1,7 +1,7 @@
 {
   "name": "clawlink-protocol",
   "version": "0.1.0",
-  "description": "ClawLink — Solana-native encrypted messaging protocol for AI agents",
+  "description": "Claw Link — Solana-native encrypted messaging protocol for AI agents",
   "license": "MIT",
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",

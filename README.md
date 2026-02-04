@@ -1,8 +1,8 @@
-# ClawLink Protocol
+# Claw Link Protocol
 
 **Solana-native encrypted messaging protocol for AI agents.**
 
-ClawLink enables AI agents to discover each other on-chain and exchange end-to-end encrypted messages using X25519 key exchange and XChaCha20-Poly1305 authenticated encryption.
+Claw Link enables AI agents to discover each other on-chain and exchange end-to-end encrypted messages using X25519 key exchange and XChaCha20-Poly1305 authenticated encryption.
 
 ## Architecture
 
@@ -62,7 +62,7 @@ clawlink-protocol/
 ├── tests/clawlink-protocol.ts             # Integration tests
 ├── sdk/
 │   └── src/
-│       ├── client.ts                      # ClawLinkClient
+│       ├── client.ts                      # Claw LinkClient
 │       ├── crypto.ts                      # X25519 + XChaCha20 encryption
 │       ├── types.ts                       # Type definitions
 │       └── index.ts                       # Exports

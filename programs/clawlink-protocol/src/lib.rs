@@ -35,7 +35,7 @@ pub mod clawlink_protocol {
         config.total_messages = 0;
         config.bump = ctx.bumps.config;
 
-        msg!("ClawLink config initialized. Authority: {}", config.authority);
+        msg!("Claw Link config initialized. Authority: {}", config.authority);
         Ok(())
     }
 
