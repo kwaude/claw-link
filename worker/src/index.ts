@@ -446,7 +446,7 @@ function renderMessages(){
         '<div class="msg-full" id="full-'+i+'">'+escHtml(m.encrypted_payload)+'</div>'+
         '<div class="reply-section">'+
           '<textarea id="reply-'+i+'" placeholder="Reply to '+truncAddr(m.sender)+'..."></textarea>'+
-          '<button onclick="event.stopPropagation();window.sendReply(\''+m.sender+'\','+i+')">Reply</button>'+
+          '<button onclick="event.stopPropagation();window.sendReply(&quot;'+m.sender+'&quot;,'+i+')">Reply</button>'+
           '<span class="reply-status" id="reply-status-'+i+'"></span>'+
         '</div>'+
       '</div>'+
