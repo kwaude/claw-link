@@ -1,5 +1,5 @@
 import { Env, Agent, Message } from './types';
-import { listAgents, getAgent, getAgentByName, upsertAgent, searchAgents, createMessage, getInbox, getInboxConversations, getConversation, getConversationMessages, markRead, markConversationRead, deleteMessage, getMessage, checkRateLimit } from './db';
+import { listAgents, getAgent, getAgentByName, upsertAgent, searchAgents, createMessage, getInbox, getInboxConversations, getConversation, getConversationMessages, markRead, markConversationRead, deleteMessage, getMessage, checkRateLimit, claimHandle, getHandle, getHandleByAddress, resolveHandlesBatch } from './db';
 import { verifyAuth } from './auth';
 
 // CORS headers
@@ -265,6 +265,7 @@ window.sendMsg=async function(){
 }
 
 // Messaging account page HTML - WhatsApp/Signal-style Chat UI
+// Messaging account page HTML - WhatsApp/Signal-style Chat UI with Handles
 function inboxPage(): Response {
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -289,6 +290,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 .no-phantom-msg a{color:#4f7cff}
 #loginScreen .login-footer{color:rgba(255,255,255,0.7);font-size:0.8rem;margin-top:24px}
 
+/* ─── Handle Claim Screen ─── */
+#handleScreen{display:none;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#4f7cff 0%,#6c63ff 100%);flex-direction:column;text-align:center;padding:40px}
+#handleScreen .handle-card{background:#fff;border-radius:20px;padding:48px 40px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+#handleScreen .handle-icon{font-size:3rem;margin-bottom:16px}
+#handleScreen h2{font-size:1.4rem;font-weight:700;margin-bottom:6px;color:#1a1a2e}
+#handleScreen .handle-sub{color:#5f6368;font-size:0.9rem;margin-bottom:24px;line-height:1.5}
+.handle-input-wrap{display:flex;align-items:center;background:#f6f8fc;border:2px solid #e0e0e0;border-radius:12px;padding:0 16px;height:52px;margin-bottom:16px;transition:border-color 0.2s}
+.handle-input-wrap:focus-within{border-color:#4f7cff}
+.handle-input-wrap .at-sign{font-size:1.1rem;font-weight:600;color:#4f7cff;margin-right:4px}
+.handle-input-wrap input{border:none;background:transparent;outline:none;font-size:1.05rem;font-weight:500;flex:1;color:#111b21;font-family:inherit}
+.handle-input-wrap input::placeholder{color:#b0b8c1;font-weight:400}
+.handle-hint{font-size:0.75rem;color:#667781;margin-bottom:16px;text-align:left}
+.handle-hint.err{color:#d93025}
+.handle-hint.ok{color:#16a34a}
+.btn-claim{padding:14px 32px;background:#4f7cff;color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:1rem;font-weight:600;width:100%;transition:all 0.2s}
+.btn-claim:hover{background:#3b68e8}
+.btn-claim:disabled{background:#b0bec5;cursor:not-allowed}
+.btn-skip{margin-top:12px;background:none;border:none;color:#667781;cursor:pointer;font-size:0.85rem;padding:8px;text-decoration:underline}
+.btn-skip:hover{color:#111b21}
+
 /* ─── App Shell ─── */
 #appShell{display:none;height:100vh;background:#f0f2f5}
 .app-container{display:flex;height:100vh;max-width:1600px;margin:0 auto;box-shadow:0 0 20px rgba(0,0,0,0.08)}
@@ -303,7 +324,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 .profile-avatar{width:42px;height:42px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;text-transform:uppercase}
 .profile-info{flex:1;min-width:0}
 .profile-brand{font-size:0.7rem;font-weight:600;color:#4f7cff;text-transform:uppercase;letter-spacing:0.5px}
-.profile-addr{font-size:0.8rem;color:#111b21;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.profile-name{font-size:0.95rem;color:#111b21;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile-addr{font-size:0.7rem;color:#667781;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .profile-actions{display:flex;align-items:center;gap:2px}
 .icon-btn{width:38px;height:38px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#54656f;font-size:1.15rem;transition:background 0.15s}
 .icon-btn:hover{background:#f0f2f5}
@@ -316,6 +338,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 .acct-identity{display:flex;align-items:center;gap:14px;margin-bottom:12px}
 .acct-avatar-lg{width:52px;height:52px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0;text-transform:uppercase}
 .acct-name{font-size:1rem;font-weight:600;color:#111b21}
+.acct-handle{font-size:0.82rem;color:#4f7cff;font-weight:500}
 .acct-addr-full{font-family:monospace;font-size:0.68rem;color:#667781;word-break:break-all;line-height:1.4}
 .acct-addr-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f6f8fc;border-radius:8px;margin-bottom:8px}
 .acct-addr-row code{flex:1;font-size:0.68rem;color:#667781;word-break:break-all;font-family:monospace}
@@ -326,6 +349,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 .acct-stat-item .acct-stat-label{font-size:0.68rem;color:#667781}
 .btn-disconnect-acct{width:100%;padding:10px 16px;background:transparent;border:1px solid #d93025;color:#d93025;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:500;transition:background 0.2s}
 .btn-disconnect-acct:hover{background:#d9302511}
+.acct-claim-link{display:block;text-align:center;padding:8px;font-size:0.82rem;color:#4f7cff;cursor:pointer;font-weight:500;border:none;background:none;width:100%}
+.acct-claim-link:hover{text-decoration:underline}
 
 /* Search */
 .search-wrap{padding:8px 12px;border-bottom:1px solid #f0f2f5}
@@ -444,7 +469,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 .conv-list::-webkit-scrollbar-thumb,.messages-area::-webkit-scrollbar-thumb{background:#c5c5c5;border-radius:3px}
 .conv-list::-webkit-scrollbar-thumb:hover,.messages-area::-webkit-scrollbar-thumb:hover{background:#a0a0a0}
 
-/* Animations */
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .bubble-row{animation:fadeIn 0.15s ease}
 
@@ -478,29 +502,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
   <p class="login-footer">No sign-ups · No passwords · Just your Solana wallet</p>
 </div>
 
+<!-- Handle Claim Screen -->
+<div id="handleScreen">
+  <div class="handle-card">
+    <div class="handle-icon">✨</div>
+    <h2>Claim your handle</h2>
+    <p class="handle-sub">Choose a username for your Claw Link identity. Others can find you at <strong>@yourname</strong></p>
+    <div class="handle-input-wrap">
+      <span class="at-sign">@</span>
+      <input id="handleInput" placeholder="yourname" oninput="window.validateHandle(this.value)" autocomplete="off" maxlength="30"/>
+    </div>
+    <div class="handle-hint" id="handleHint">Lowercase letters, numbers, and hyphens. 1-30 characters.</div>
+    <button class="btn-claim" id="claimBtn" onclick="window.claimHandle()" disabled>Claim Handle</button>
+    <button class="btn-skip" onclick="window.skipHandle()">Skip for now</button>
+  </div>
+</div>
+
 <!-- App Shell -->
 <div id="appShell">
   <div class="app-container">
     <!-- Left Panel -->
     <div class="left-panel" id="leftPanel">
-
-      <!-- Profile Header -->
       <div class="profile-header">
         <div class="profile-top">
           <div class="profile-identity" id="profileIdentity" onclick="window.toggleAccountDrop()">
             <div class="profile-avatar" id="profileAvatar">??</div>
             <div class="profile-info">
               <div class="profile-brand">CLAW LINK</div>
-              <div class="profile-addr" id="profileAddr">Not connected</div>
+              <div class="profile-name" id="profileName">Not connected</div>
+              <div class="profile-addr" id="profileAddr"></div>
             </div>
-            <!-- Account Dropdown -->
             <div class="account-dropdown" id="accountDrop">
               <div class="acct-section">
                 <div class="acct-identity">
                   <div class="acct-avatar-lg" id="acctAvatarLg">??</div>
                   <div>
                     <div class="acct-name" id="acctName">Your Account</div>
-                    <div class="acct-addr-full" id="acctAddrShort"></div>
+                    <div class="acct-handle" id="acctHandle"></div>
                   </div>
                 </div>
                 <div class="acct-addr-row">
@@ -511,6 +549,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
                   <div class="acct-stat-item"><div class="acct-stat-num" id="statConvs">0</div><div class="acct-stat-label">Conversations</div></div>
                   <div class="acct-stat-item"><div class="acct-stat-num" id="statUnread">0</div><div class="acct-stat-label">Unread</div></div>
                 </div>
+              </div>
+              <div class="acct-section" id="acctClaimSection" style="display:none">
+                <button class="acct-claim-link" onclick="event.stopPropagation();window.showHandleScreen()">✨ Claim a handle</button>
               </div>
               <div class="acct-section">
                 <button class="btn-disconnect-acct" onclick="event.stopPropagation();window.disconnectWallet()">Disconnect Wallet</button>
@@ -523,16 +564,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
           </div>
         </div>
       </div>
-
-      <!-- Search -->
       <div class="search-wrap">
         <div class="search-box">
           <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
           <input type="text" placeholder="Search conversations" id="searchInput" oninput="window.filterConversations(this.value)"/>
         </div>
       </div>
-
-      <!-- Conversation List -->
       <div id="convList" class="conv-list"></div>
       <div id="convEmpty" class="conv-empty" style="display:none">
         <div class="empty-icon">💬</div>
@@ -542,7 +579,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 
     <!-- Right Panel -->
     <div class="right-panel" id="rightPanel">
-      <!-- Welcome State -->
       <div class="welcome-state" id="welcomeState">
         <svg class="welcome-icon" viewBox="0 0 303 172" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="303" height="172" rx="20" fill="#DCE0E5"/><path d="M95 58h113a8 8 0 0 1 8 8v50a8 8 0 0 1-8 8H142l-20 16v-16H95a8 8 0 0 1-8-8V66a8 8 0 0 1 8-8z" fill="#B8BFC6"/><circle cx="126" cy="91" r="6" fill="#A0A8B0"/><circle cx="151" cy="91" r="6" fill="#A0A8B0"/><circle cx="176" cy="91" r="6" fill="#A0A8B0"/></svg>
         <h2>Claw Link</h2>
@@ -550,8 +586,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
         <div class="e2e-badge">🔒 End-to-end encrypted</div>
         <div class="powered">Powered by <a href="https://clawlink.app">clawlink.app</a></div>
       </div>
-
-      <!-- Active Chat View -->
       <div id="chatView" style="display:none;flex-direction:column;flex:1;height:100%">
         <div class="chat-header">
           <button class="back-btn" onclick="window.showConvList()">←</button>
@@ -586,13 +620,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
       <button class="modal-close" onclick="window.closeNewChat()">✕</button>
     </div>
     <div class="modal-body">
-      <input class="modal-search" id="agentSearch" placeholder="Search agents by name, skill, or address..." oninput="window.searchAgents(this.value)" autocomplete="off"/>
+      <input class="modal-search" id="agentSearch" placeholder="Search by handle, name, or address..." oninput="window.searchAgents(this.value)" autocomplete="off"/>
       <div class="modal-results" id="agentResults"></div>
     </div>
-    <div class="modal-divider">Or enter an address directly</div>
+    <div class="modal-divider">Or enter a handle or address directly</div>
     <div class="modal-footer">
       <div class="modal-direct">
-        <input id="directAddress" placeholder="Solana address..."/>
+        <input id="directAddress" placeholder="@handle or Solana address..."/>
         <button onclick="window.startDirectChat()">Chat</button>
       </div>
     </div>
@@ -602,14 +636,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 
 <script>
 var connectedAddress=null;
+var myHandle=null;
 var allConversations=[];
 var filteredConversations=null;
 var currentConvId=null;
 var currentConvIdx=null;
 var currentConvParticipants=[];
+var handleMap={};
 var isMobile=window.innerWidth<768;
 
 function truncAddr(a){if(!a)return'?';return a.length>12?a.slice(0,6)+'\\u2026'+a.slice(-4):a}
+function displayName(addr){
+  if(handleMap[addr])return '@'+handleMap[addr];
+  return truncAddr(addr);
+}
+function displayNameShort(addr){
+  if(handleMap[addr])return '@'+handleMap[addr];
+  return truncAddr(addr);
+}
 function timeShort(ts){
   var d=new Date(ts*1000);var now=new Date();
   var diffDays=Math.floor((now.getTime()-d.getTime())/(86400000));
@@ -637,9 +681,12 @@ function avatarColor(addr){
   var h=0;for(var i=0;i<addr.length;i++)h=((h<<5)-h)+addr.charCodeAt(i);
   return colors[Math.abs(h)%colors.length];
 }
-function avatarChars(addr){return addr.slice(0,2).toUpperCase()}
+function avatarChars(addr){
+  if(handleMap[addr])return handleMap[addr].slice(0,2).toUpperCase();
+  return addr.slice(0,2).toUpperCase();
+}
 
-// Account dropdown
+// ─── Account dropdown ───
 window.toggleAccountDrop=function(){document.getElementById('accountDrop').classList.toggle('show')};
 document.addEventListener('click',function(e){
   var pi=document.getElementById('profileIdentity');
@@ -654,22 +701,29 @@ window.copyAddress=function(){
   });
 };
 
-// Update profile UI after connect
 function updateProfileUI(){
   if(!connectedAddress)return;
-  var trunc=truncAddr(connectedAddress);
   var color=avatarColor(connectedAddress);
-  var chars=avatarChars(connectedAddress);
+  var chars=myHandle?myHandle.slice(0,2).toUpperCase():connectedAddress.slice(0,2).toUpperCase();
+  var nameText=myHandle?'@'+myHandle:truncAddr(connectedAddress);
+  var addrText=myHandle?truncAddr(connectedAddress):'';
   // Profile header
   document.getElementById('profileAvatar').textContent=chars;
   document.getElementById('profileAvatar').style.background=color;
-  document.getElementById('profileAddr').textContent=trunc;
+  document.getElementById('profileName').textContent=nameText;
+  document.getElementById('profileAddr').textContent=addrText;
+  document.getElementById('profileAddr').style.display=addrText?'block':'none';
   // Account dropdown
   document.getElementById('acctAvatarLg').textContent=chars;
   document.getElementById('acctAvatarLg').style.background=color;
-  document.getElementById('acctName').textContent=trunc;
-  document.getElementById('acctAddrShort').textContent=connectedAddress.slice(0,20)+'...';
+  document.getElementById('acctName').textContent=nameText;
+  document.getElementById('acctHandle').textContent=myHandle?'@'+myHandle+'.clawlink.app':'';
+  document.getElementById('acctHandle').style.display=myHandle?'block':'none';
   document.getElementById('acctAddrFull').textContent=connectedAddress;
+  // Show/hide claim link
+  document.getElementById('acctClaimSection').style.display=myHandle?'none':'block';
+  // Page title
+  document.title=myHandle?'@'+myHandle+' — Claw Link':'Claw Link — Messaging';
 }
 
 function updateAccountStats(){
@@ -679,7 +733,66 @@ function updateAccountStats(){
   document.getElementById('statUnread').textContent=unread;
 }
 
-// Wallet connect
+// ─── Handle claim ───
+window.validateHandle=function(val){
+  var hint=document.getElementById('handleHint');
+  var btn=document.getElementById('claimBtn');
+  var v=val.toLowerCase().trim();
+  document.getElementById('handleInput').value=v;
+  if(!v){hint.textContent='Lowercase letters, numbers, and hyphens. 1-30 characters.';hint.className='handle-hint';btn.disabled=true;return}
+  if(!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(v)&&!/^[a-z0-9]{1,2}$/.test(v)){
+    hint.textContent='Only lowercase letters, numbers, and hyphens. Cannot start/end with hyphen.';hint.className='handle-hint err';btn.disabled=true;return;
+  }
+  if(v.length>30){hint.textContent='Maximum 30 characters.';hint.className='handle-hint err';btn.disabled=true;return}
+  hint.textContent='@'+v+'.clawlink.app — looks good!';hint.className='handle-hint ok';btn.disabled=false;
+};
+
+window.claimHandle=async function(){
+  var input=document.getElementById('handleInput');
+  var btn=document.getElementById('claimBtn');
+  var hint=document.getElementById('handleHint');
+  var handle=input.value.toLowerCase().trim();
+  if(!handle)return;
+  btn.disabled=true;btn.textContent='Claiming...';
+  try{
+    var r=await fetch('https://api.clawlink.app/api/handle/claim',{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},authHeaders()),
+      body:JSON.stringify({handle:handle,address:connectedAddress})
+    });
+    var d=await r.json();
+    if(r.ok){
+      myHandle=handle;
+      handleMap[connectedAddress]=handle;
+      updateProfileUI();
+      document.getElementById('handleScreen').style.display='none';
+      document.getElementById('appShell').style.display='block';
+      window.loadInbox();
+    }else{
+      hint.textContent=d.error||'Failed to claim handle';hint.className='handle-hint err';
+    }
+  }catch(e){hint.textContent='Error: '+e.message;hint.className='handle-hint err'}
+  finally{btn.disabled=false;btn.textContent='Claim Handle'}
+};
+
+window.skipHandle=function(){
+  document.getElementById('handleScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+  window.loadInbox();
+};
+
+window.showHandleScreen=function(){
+  document.getElementById('accountDrop').classList.remove('show');
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('handleScreen').style.display='flex';
+  document.getElementById('handleInput').value='';
+  document.getElementById('handleHint').textContent='Lowercase letters, numbers, and hyphens. 1-30 characters.';
+  document.getElementById('handleHint').className='handle-hint';
+  document.getElementById('claimBtn').disabled=true;
+  setTimeout(function(){document.getElementById('handleInput').focus()},100);
+};
+
+// ─── Wallet connect ───
 window.connectWallet=async function(){
   var provider=getProvider();
   if(!provider||!provider.isPhantom){
@@ -694,18 +807,33 @@ window.connectWallet=async function(){
     await provider.signMessage(encoded,'utf8');
     connectedAddress=addr;
     document.getElementById('loginScreen').style.display='none';
-    document.getElementById('appShell').style.display='block';
+    // Check if this address has a handle
+    try{
+      var hr=await fetch('https://api.clawlink.app/api/handle/lookup/'+addr);
+      var hd=await hr.json();
+      if(hd.handle){
+        myHandle=hd.handle;
+        handleMap[addr]=hd.handle;
+      }
+    }catch(e){}
     updateProfileUI();
-    window.loadInbox();
+    if(!myHandle){
+      // Show handle claim screen
+      document.getElementById('handleScreen').style.display='flex';
+    }else{
+      document.getElementById('appShell').style.display='block';
+      window.loadInbox();
+    }
   }catch(e){console.error('Connect failed:',e);if(provider&&provider.disconnect)provider.disconnect().catch(function(){})}
 };
 
 window.disconnectWallet=async function(){
   var provider=getProvider();
   if(provider)try{await provider.disconnect()}catch(e){}
-  connectedAddress=null;
+  connectedAddress=null;myHandle=null;handleMap={};
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('appShell').style.display='none';
+  document.getElementById('handleScreen').style.display='none';
   document.getElementById('accountDrop').classList.remove('show');
   currentConvId=null;
 };
@@ -732,7 +860,11 @@ window.filterConversations=function(q){
   var lower=q.toLowerCase();
   filteredConversations=allConversations.filter(function(c){
     if((c.last_preview||'').toLowerCase().indexOf(lower)>=0)return true;
-    for(var i=0;i<c.participants.length;i++){if(c.participants[i].toLowerCase().indexOf(lower)>=0)return true}
+    for(var i=0;i<c.participants.length;i++){
+      if(c.participants[i].toLowerCase().indexOf(lower)>=0)return true;
+      var h=handleMap[c.participants[i]];
+      if(h&&h.toLowerCase().indexOf(lower)>=0)return true;
+    }
     return false;
   });
   renderConversations();
@@ -746,6 +878,8 @@ window.loadInbox=async function(){
     if(!r.ok)return;
     var d=await r.json();
     allConversations=d.conversations||[];
+    // Merge handle map from API
+    if(d.handles){for(var addr in d.handles){handleMap[addr]=d.handles[addr]}}
     filteredConversations=null;
     renderConversations();
     updateAccountStats();
@@ -764,7 +898,7 @@ function renderConversations(){
   for(var i=0;i<convs.length;i++){
     var c=convs[i];
     var others=[];for(var j=0;j<c.participants.length;j++){if(c.participants[j]!==connectedAddress)others.push(c.participants[j])}
-    var displayName=others.length>0?others.map(truncAddr).join(', '):'You';
+    var dn=others.length>0?others.map(displayName).join(', '):'You';
     var isUnread=(c.unread_count||0)>0;
     var isActive=c.id===currentConvId;
     var classes='conv-item'+(isUnread?' unread':'')+(isActive?' active':'');
@@ -780,7 +914,7 @@ function renderConversations(){
       '<div class="conv-avatar" style="background:'+color+'">'+chars+'</div>'+
       '<div class="conv-info">'+
         '<div class="conv-top">'+
-          '<span class="conv-name">'+groupLabel+displayName+'</span>'+
+          '<span class="conv-name">'+groupLabel+escHtml(dn)+'</span>'+
           '<span class="conv-time">'+timeShort(c.last_message_at)+'</span>'+
         '</div>'+
         '<div class="conv-bottom">'+
@@ -812,9 +946,10 @@ window.openConversation=async function(convId,idx){
   var others=[];for(var j=0;j<conv.participants.length;j++){if(conv.participants[j]!==connectedAddress)others.push(conv.participants[j])}
   var isGroup=conv.participants.length>2;
   var mainAddr=others[0]||connectedAddress;
-  var displayName=isGroup?'Group ('+conv.participants.length+')':others.map(truncAddr).join(', ');
-  document.getElementById('chatName').textContent=displayName;
-  document.getElementById('chatStatus').textContent=isGroup?conv.participants.length+' participants':mainAddr;
+  var dn=isGroup?'Group ('+conv.participants.length+')':others.map(displayName).join(', ');
+  var statusText=isGroup?conv.participants.map(displayNameShort).join(', '):(handleMap[mainAddr]?mainAddr:displayName(mainAddr));
+  document.getElementById('chatName').textContent=dn;
+  document.getElementById('chatStatus').textContent=statusText;
   document.getElementById('chatAvatar').textContent=avatarChars(mainAddr);
   document.getElementById('chatAvatar').style.background=avatarColor(mainAddr);
 
@@ -831,6 +966,8 @@ window.openConversation=async function(convId,idx){
     if(!r.ok){msgsInner.innerHTML='<div style="text-align:center;color:#d93025;padding:40px">Failed to load</div>';return}
     var d=await r.json();
     var msgs=d.messages||[];
+    // Merge handles from conversation response
+    if(d.handles){for(var addr in d.handles){handleMap[addr]=d.handles[addr]}}
 
     if(msgs.length===0){
       msgsInner.innerHTML='<div style="text-align:center;color:#667781;padding:40px;font-size:0.85rem">No messages yet. Say hello! \\ud83d\\udc4b</div>';
@@ -859,7 +996,7 @@ window.openConversation=async function(convId,idx){
       if(showTail)bubbleClass+=' tail';
       var senderLabel='';
       if(isGroup&&!isMine&&showTail){
-        senderLabel='<span class="sender-label">'+truncAddr(m.sender)+'</span>';
+        senderLabel='<span class="sender-label">'+escHtml(displayName(m.sender))+'</span>';
       }
 
       html+='<div class="bubble-row '+(isMine?'mine':'theirs')+'">'+
@@ -877,6 +1014,12 @@ window.openConversation=async function(convId,idx){
     msgsInner.innerHTML=html;
     var area=document.getElementById('messagesArea');
     area.scrollTop=area.scrollHeight;
+
+    // Update chat header with resolved handles
+    dn=isGroup?'Group ('+conv.participants.length+')':others.map(displayName).join(', ');
+    statusText=isGroup?conv.participants.map(displayNameShort).join(', '):(handleMap[mainAddr]?mainAddr:displayName(mainAddr));
+    document.getElementById('chatName').textContent=dn;
+    document.getElementById('chatStatus').textContent=statusText;
 
     fetch('https://api.clawlink.app/api/conversations/'+convId+'/read',{
       method:'PATCH',headers:authHeaders()
@@ -955,12 +1098,11 @@ window.sendMessage=async function(){
 
 // Enter to send
 document.addEventListener('keydown',function(e){
-  if(e.target.id==='msgInput'&&e.key==='Enter'&&!e.shiftKey){
-    e.preventDefault();window.sendMessage();
-  }
+  if(e.target.id==='msgInput'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();window.sendMessage()}
+  if(e.target.id==='handleInput'&&e.key==='Enter'){e.preventDefault();if(!document.getElementById('claimBtn').disabled)window.claimHandle()}
 });
 
-// New Chat Modal
+// ─── New Chat Modal ───
 var acCache=null;
 var acTimeout=null;
 
@@ -1002,10 +1144,11 @@ window.searchAgents=function(q){
       var name=a.name||a.address.slice(0,12);
       var skills=a.skills?a.skills.slice(0,3).join(', '):'';
       var color=avatarColor(a.address);
+      var nameDisplay=a.name?'@'+a.name:truncAddr(a.address);
       html+='<div class="modal-agent" onclick="window.startChatWith(\''+a.address+'\')">'+
-        '<div class="modal-agent-avatar" style="background:'+color+'">'+avatarChars(name)+'</div>'+
+        '<div class="modal-agent-avatar" style="background:'+color+'">'+avatarChars(a.address)+'</div>'+
         '<div class="modal-agent-info">'+
-          '<div class="modal-agent-name">'+escHtml(name)+'</div>'+
+          '<div class="modal-agent-name">'+escHtml(nameDisplay)+'</div>'+
           '<div class="modal-agent-addr">'+a.address+'</div>'+
           (skills?'<div class="modal-agent-skills">'+escHtml(skills)+'</div>':'')+
         '</div>'+
@@ -1015,10 +1158,26 @@ window.searchAgents=function(q){
   },150);
 };
 
-window.startDirectChat=function(){
-  var addr=document.getElementById('directAddress').value.trim();
-  if(!addr){document.getElementById('newChatStatus').className='compose-status err';document.getElementById('newChatStatus').textContent='Enter an address';return}
-  window.startChatWith(addr);
+window.startDirectChat=async function(){
+  var val=document.getElementById('directAddress').value.trim();
+  if(!val){document.getElementById('newChatStatus').className='compose-status err';document.getElementById('newChatStatus').textContent='Enter a handle or address';return}
+  // Check if it's a handle (starts with @ or is short alphanumeric)
+  var handle=val.replace(/^@/,'').toLowerCase();
+  if(handle.length<44&&/^[a-z0-9-]+$/.test(handle)){
+    // Try to resolve handle
+    try{
+      var r=await fetch('https://api.clawlink.app/api/handle/'+handle);
+      if(r.ok){
+        var d=await r.json();
+        handleMap[d.address]=handle;
+        window.startChatWith(d.address);
+        return;
+      }
+    }catch(e){}
+    // If not a handle, maybe it's a short address portion — fall through
+  }
+  // Treat as address
+  window.startChatWith(val);
 };
 
 window.startChatWith=async function(recipientAddr){
@@ -1049,7 +1208,7 @@ window.startChatWith=async function(recipientAddr){
 
   document.getElementById('welcomeState').style.display='none';
   document.getElementById('chatView').style.display='flex';
-  document.getElementById('chatName').textContent=truncAddr(recipientAddr);
+  document.getElementById('chatName').textContent=displayName(recipientAddr);
   document.getElementById('chatStatus').textContent=recipientAddr;
   document.getElementById('chatAvatar').textContent=avatarChars(recipientAddr);
   document.getElementById('chatAvatar').style.background=avatarColor(recipientAddr);
@@ -1102,11 +1261,11 @@ window.startChatWith=async function(recipientAddr){
 </script>
 </body>
 </html>`;
+
   return new Response(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
   });
 }
-
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -1129,15 +1288,52 @@ export default {
         
         const agentName = subdomainMatch[1];
         
-        const agent = await getAgentByName(env, agentName) 
-          || await getAgent(env, agentName)
-          || (await searchAgents(env, agentName))[0];
+        // Check handle system first, then fall back to agent lookup
+        const handleData = await getHandle(env, agentName);
+        const agent = handleData 
+          ? (await getAgent(env, handleData.address))
+          : (await getAgentByName(env, agentName) || await getAgent(env, agentName) || (await searchAgents(env, agentName))[0]);
         
-        if (!agent) {
-          return new Response(`<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh"><div style="text-align:center"><h1>Agent not found</h1><p>${agentName}.clawlink.app is not registered</p><p><a href="https://clawlink.app">← Back to Claw Link</a></p></div></body></html>`, {
+        if (!agent && !handleData) {
+          return new Response(`<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh"><div style="text-align:center"><h1>@${agentName} not found</h1><p>This handle is not registered on Claw Link</p><p><a href="https://app.clawlink.app">Open Claw Link →</a></p></div></body></html>`, {
             status: 404,
             headers: { 'Content-Type': 'text/html' },
           });
+        }
+        
+        // If we have a handle but no agent profile, create a minimal profile page
+        if (!agent && handleData) {
+          const minAgent: Agent = {
+            address: handleData.address,
+            name: handleData.handle,
+            registered_at: handleData.claimed_at,
+            message_count: 0,
+            skills: [],
+            description: '@' + handleData.handle + ' on Claw Link',
+            last_seen: handleData.claimed_at,
+          };
+          
+          if (request.method === 'POST') {
+            const body = await request.json() as any;
+            const senderAddr = body.sender || 'anonymous';
+            const rateCheck = await checkRateLimit(env, senderAddr);
+            if (!rateCheck.allowed) return json({ error: 'Rate limit exceeded.', remaining: 0 }, 429);
+            const now = Math.floor(Date.now() / 1000);
+            const msg: Message = {
+              id: crypto.randomUUID(),
+              conversation_id: body.conversation_id || crypto.randomUUID(),
+              sender: senderAddr,
+              recipient: handleData.address,
+              recipients: [handleData.address],
+              encrypted_payload: body.encrypted_payload || JSON.stringify(body),
+              created_at: now,
+              expires_at: now + 7 * 24 * 60 * 60,
+            };
+            await createMessage(env, msg);
+            return json({ id: msg.id, conversation_id: msg.conversation_id, delivered: true, remaining: rateCheck.remaining });
+          }
+          
+          return agentProfilePage(minAgent);
         }
         
         // POST to subdomain = send message
@@ -1176,19 +1372,27 @@ export default {
       // ── Profile page /u/:handle ──
       const profileMatch = url.pathname.match(/^\/u\/([a-z0-9_-]+)\/?$/i);
       if (profileMatch) {
-        const handle = profileMatch[1];
-        const agent = await getAgentByName(env, handle)
-          || await getAgent(env, handle)
-          || (await searchAgents(env, handle))[0];
+        const handle = profileMatch[1].toLowerCase();
         
-        if (!agent) {
-          return new Response('<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh"><div style="text-align:center"><h1>@' + handle + ' not found</h1><p>This handle is not registered on Claw Link</p><p><a href="https://clawlink.app">Back to Claw Link</a></p></div></body></html>', {
+        // Check handle system first, then agent lookup
+        const handleData = await getHandle(env, handle);
+        const agent = handleData
+          ? (await getAgent(env, handleData.address))
+          : (await getAgentByName(env, handle) || await getAgent(env, handle) || (await searchAgents(env, handle))[0]);
+        
+        if (!agent && !handleData) {
+          return new Response('<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh"><div style="text-align:center"><h1>@' + handle + ' not found</h1><p>This handle is not registered on Claw Link</p><p><a href="https://app.clawlink.app">Open Claw Link →</a></p></div></body></html>', {
             status: 404,
             headers: { 'Content-Type': 'text/html' },
           });
         }
         
-        return agentProfilePage(agent);
+        if (!agent && handleData) {
+          const minAgent: Agent = { address: handleData.address, name: handleData.handle, registered_at: handleData.claimed_at, message_count: 0, skills: [], description: '@' + handleData.handle + ' on Claw Link', last_seen: handleData.claimed_at };
+          return agentProfilePage(minAgent);
+        }
+        
+        return agentProfilePage(agent!);
       }
 
       // ── Health check ──
@@ -1301,6 +1505,41 @@ export default {
         }, 201);
       }
 
+      // ── Handles: Claim ──
+      params = match('POST', '/api/handle/claim', request);
+      if (params !== null) {
+        const auth = verifyAuth(request);
+        if (!auth.ok) return error(auth.error || 'Unauthorized', 401);
+        
+        const body = await request.json() as { handle?: string; address?: string };
+        const handle = body.handle?.toLowerCase().trim();
+        const address = body.address || auth.address!;
+        
+        if (address !== auth.address) return error('Address mismatch', 403);
+        if (!handle) return error('handle is required');
+        
+        const result = await claimHandle(env, handle, address);
+        if (!result.ok) return error(result.error || 'Failed to claim handle', 409);
+        
+        return json({ handle, address, claimed: true });
+      }
+
+      // ── Handles: Resolve handle → address ──
+      params = match('GET', '/api/handle/lookup/:address', request);
+      if (params) {
+        const handle = await getHandleByAddress(env, params.address);
+        if (!handle) return json({ address: params.address, handle: null });
+        return json({ address: params.address, handle });
+      }
+
+      // ── Handles: Resolve handle → address (by name) ──
+      params = match('GET', '/api/handle/:name', request);
+      if (params) {
+        const data = await getHandle(env, params.name.toLowerCase());
+        if (!data) return error('Handle not found', 404);
+        return json(data);
+      }
+
       // ── Inbox: Get conversations ──
       params = match('GET', '/api/inbox/:address', request);
       if (params) {
@@ -1309,7 +1548,15 @@ export default {
         if (auth.address !== params.address) return error('Address mismatch', 403);
         
         const { conversations } = await getInboxConversations(env, params.address);
-        return json({ conversations, count: conversations.length });
+        
+        // Resolve handles for all participants
+        const allAddrs = new Set<string>();
+        for (const c of conversations) {
+          for (const p of c.participants) allAddrs.add(p);
+        }
+        const handles = await resolveHandlesBatch(env, [...allAddrs]);
+        
+        return json({ conversations, handles, count: conversations.length });
       }
 
       // ── Conversations: Get messages in conversation ──
@@ -1327,7 +1574,13 @@ export default {
         }
         
         const messages = await getConversationMessages(env, params.id);
-        return json({ conversation: conv, messages });
+        
+        // Resolve handles for all senders + participants
+        const addrs = new Set(conv.participants);
+        for (const m of messages) addrs.add(m.sender);
+        const handles = await resolveHandlesBatch(env, [...addrs]);
+        
+        return json({ conversation: conv, messages, handles });
       }
 
       // ── Conversations: Mark read ──

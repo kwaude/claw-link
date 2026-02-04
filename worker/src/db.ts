@@ -364,6 +364,78 @@ export async function getMessage(env: Env, id: string): Promise<Message | null> 
   return await env.MESSAGES.get<Message>(`msg:${id}`, 'json');
 }
 
+// ── Handle operations ──
+
+export interface Handle {
+  handle: string;
+  address: string;
+  claimed_at: number;
+}
+
+export async function claimHandle(env: Env, handle: string, address: string): Promise<{ ok: boolean; error?: string }> {
+  // Validate handle format
+  if (!/^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/.test(handle) && !/^[a-z0-9]{1,2}$/.test(handle)) {
+    return { ok: false, error: 'Handle must be 1-30 chars, lowercase alphanumeric and hyphens, cannot start/end with hyphen' };
+  }
+
+  // Reserved handles
+  const reserved = ['api','www','app','inbox','admin','root','system','clawlink','claw-link','messages','help','support'];
+  if (reserved.includes(handle)) {
+    return { ok: false, error: 'This handle is reserved' };
+  }
+
+  // Check if handle is already taken
+  const existing = await env.AGENTS.get(`handle:${handle}`);
+  if (existing) {
+    const data = JSON.parse(existing) as Handle;
+    if (data.address === address) return { ok: true }; // Already owns it
+    return { ok: false, error: 'Handle already taken' };
+  }
+
+  // Check if this address already has a handle
+  const existingHandle = await env.AGENTS.get(`addr-handle:${address}`);
+  if (existingHandle) {
+    return { ok: false, error: 'Address already has handle @' + existingHandle };
+  }
+
+  // Check if handle conflicts with an existing agent name
+  const agentWithName = await env.AGENTS.get(`name:${handle}`);
+  if (agentWithName && agentWithName !== address) {
+    return { ok: false, error: 'Handle conflicts with existing agent name' };
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const data: Handle = { handle, address, claimed_at: now };
+
+  // Write both directions
+  await env.AGENTS.put(`handle:${handle}`, JSON.stringify(data));
+  await env.AGENTS.put(`addr-handle:${address}`, handle);
+
+  // Also set as agent name for subdomain routing compatibility
+  await env.AGENTS.put(`name:${handle}`, address);
+
+  return { ok: true };
+}
+
+export async function getHandle(env: Env, handle: string): Promise<Handle | null> {
+  const data = await env.AGENTS.get(`handle:${handle}`);
+  if (!data) return null;
+  return JSON.parse(data) as Handle;
+}
+
+export async function getHandleByAddress(env: Env, address: string): Promise<string | null> {
+  return await env.AGENTS.get(`addr-handle:${address}`);
+}
+
+export async function resolveHandlesBatch(env: Env, addresses: string[]): Promise<Record<string, string>> {
+  const map: Record<string, string> = {};
+  for (const addr of addresses) {
+    const h = await env.AGENTS.get(`addr-handle:${addr}`);
+    if (h) map[addr] = h;
+  }
+  return map;
+}
+
 // ── Rate limiting ──
 
 export async function checkRateLimit(env: Env, address: string, limit = 10): Promise<{ allowed: boolean; remaining: number }> {
