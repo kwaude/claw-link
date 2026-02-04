@@ -1,22 +1,19 @@
 [toolchain]
-package_manager = "yarn"
 
 [features]
-resolution = true
+seeds = false
 skip-lint = false
 
-[programs.localnet]
-clawlink_protocol = "4t5tX2fELbKCEymX4KWEA3voWp1Fxe8fbfPP3xKtyNxR"
-
 [programs.devnet]
-clawlink_protocol = "4t5tX2fELbKCEymX4KWEA3voWp1Fxe8fbfPP3xKtyNxR"
+messaging = "4t5tX2fELbKCEymX4KWEA3voWp1Fxe8fbfPP3xKtyNxR"
+payments = "DpVYsUBZ9f8Lny2xvPUK6E8RWxBA7pBh2XRLHWUu9jHP"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 120000 tests/**/*.ts"
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
