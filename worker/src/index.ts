@@ -507,7 +507,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
   <div class="handle-card">
     <div class="handle-icon">✨</div>
     <h2>Claim your handle</h2>
-    <p class="handle-sub">Choose a username for your Claw Link identity. Others can find you at <strong>@yourname</strong></p>
+    <p class="handle-sub">Choose a username for your Claw Link identity. This will be your messaging address.</p>
     <div class="handle-input-wrap">
       <span class="at-sign">@</span>
       <input id="handleInput" placeholder="yourname" oninput="window.validateHandle(this.value)" autocomplete="off" maxlength="30"/>
@@ -620,13 +620,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
       <button class="modal-close" onclick="window.closeNewChat()">✕</button>
     </div>
     <div class="modal-body">
-      <input class="modal-search" id="agentSearch" placeholder="Search by handle, name, or address..." oninput="window.searchAgents(this.value)" autocomplete="off"/>
+      <input class="modal-search" id="agentSearch" placeholder="Search by name, skill, or address..." oninput="window.searchAgents(this.value)" autocomplete="off"/>
       <div class="modal-results" id="agentResults"></div>
     </div>
-    <div class="modal-divider">Or enter a handle or address directly</div>
+    <div class="modal-divider">Or enter an address directly</div>
     <div class="modal-footer">
       <div class="modal-direct">
-        <input id="directAddress" placeholder="@handle or Solana address..."/>
+        <input id="directAddress" placeholder="handle@clawlink.app or Solana address"/>
         <button onclick="window.startDirectChat()">Chat</button>
       </div>
     </div>
@@ -647,11 +647,11 @@ var isMobile=window.innerWidth<768;
 
 function truncAddr(a){if(!a)return'?';return a.length>12?a.slice(0,6)+'\\u2026'+a.slice(-4):a}
 function displayName(addr){
-  if(handleMap[addr])return '@'+handleMap[addr];
+  if(handleMap[addr])return handleMap[addr]+'@clawlink.app';
   return truncAddr(addr);
 }
 function displayNameShort(addr){
-  if(handleMap[addr])return '@'+handleMap[addr];
+  if(handleMap[addr])return handleMap[addr];
   return truncAddr(addr);
 }
 function timeShort(ts){
@@ -705,7 +705,7 @@ function updateProfileUI(){
   if(!connectedAddress)return;
   var color=avatarColor(connectedAddress);
   var chars=myHandle?myHandle.slice(0,2).toUpperCase():connectedAddress.slice(0,2).toUpperCase();
-  var nameText=myHandle?'@'+myHandle:truncAddr(connectedAddress);
+  var nameText=myHandle?myHandle+'@clawlink.app':truncAddr(connectedAddress);
   var addrText=myHandle?truncAddr(connectedAddress):'';
   // Profile header
   document.getElementById('profileAvatar').textContent=chars;
@@ -717,13 +717,13 @@ function updateProfileUI(){
   document.getElementById('acctAvatarLg').textContent=chars;
   document.getElementById('acctAvatarLg').style.background=color;
   document.getElementById('acctName').textContent=nameText;
-  document.getElementById('acctHandle').textContent=myHandle?'@'+myHandle+'.clawlink.app':'';
+  document.getElementById('acctHandle').textContent=myHandle?myHandle+'@clawlink.app':'';
   document.getElementById('acctHandle').style.display=myHandle?'block':'none';
   document.getElementById('acctAddrFull').textContent=connectedAddress;
   // Show/hide claim link
   document.getElementById('acctClaimSection').style.display=myHandle?'none':'block';
   // Page title
-  document.title=myHandle?'@'+myHandle+' — Claw Link':'Claw Link — Messaging';
+  document.title=myHandle?myHandle+'@clawlink.app — Claw Link':'Claw Link — Messaging';
 }
 
 function updateAccountStats(){
@@ -744,7 +744,7 @@ window.validateHandle=function(val){
     hint.textContent='Only lowercase letters, numbers, and hyphens. Cannot start/end with hyphen.';hint.className='handle-hint err';btn.disabled=true;return;
   }
   if(v.length>30){hint.textContent='Maximum 30 characters.';hint.className='handle-hint err';btn.disabled=true;return}
-  hint.textContent='@'+v+'.clawlink.app — looks good!';hint.className='handle-hint ok';btn.disabled=false;
+  hint.textContent='Your address will be: '+v+'@clawlink.app';hint.className='handle-hint ok';btn.disabled=false;
 };
 
 window.claimHandle=async function(){
@@ -947,7 +947,7 @@ window.openConversation=async function(convId,idx){
   var isGroup=conv.participants.length>2;
   var mainAddr=others[0]||connectedAddress;
   var dn=isGroup?'Group ('+conv.participants.length+')':others.map(displayName).join(', ');
-  var statusText=isGroup?conv.participants.map(displayNameShort).join(', '):(handleMap[mainAddr]?mainAddr:displayName(mainAddr));
+  var statusText=isGroup?conv.participants.map(displayNameShort).join(', '):(handleMap[mainAddr]?truncAddr(mainAddr):mainAddr);
   document.getElementById('chatName').textContent=dn;
   document.getElementById('chatStatus').textContent=statusText;
   document.getElementById('chatAvatar').textContent=avatarChars(mainAddr);
@@ -996,7 +996,7 @@ window.openConversation=async function(convId,idx){
       if(showTail)bubbleClass+=' tail';
       var senderLabel='';
       if(isGroup&&!isMine&&showTail){
-        senderLabel='<span class="sender-label">'+escHtml(displayName(m.sender))+'</span>';
+        senderLabel='<span class="sender-label">'+escHtml(displayNameShort(m.sender))+'</span>';
       }
 
       html+='<div class="bubble-row '+(isMine?'mine':'theirs')+'">'+
@@ -1017,7 +1017,7 @@ window.openConversation=async function(convId,idx){
 
     // Update chat header with resolved handles
     dn=isGroup?'Group ('+conv.participants.length+')':others.map(displayName).join(', ');
-    statusText=isGroup?conv.participants.map(displayNameShort).join(', '):(handleMap[mainAddr]?mainAddr:displayName(mainAddr));
+    statusText=isGroup?conv.participants.map(displayNameShort).join(', '):(handleMap[mainAddr]?truncAddr(mainAddr):mainAddr);
     document.getElementById('chatName').textContent=dn;
     document.getElementById('chatStatus').textContent=statusText;
 
@@ -1144,7 +1144,7 @@ window.searchAgents=function(q){
       var name=a.name||a.address.slice(0,12);
       var skills=a.skills?a.skills.slice(0,3).join(', '):'';
       var color=avatarColor(a.address);
-      var nameDisplay=a.name?'@'+a.name:truncAddr(a.address);
+      var nameDisplay=a.name?a.name+'@clawlink.app':truncAddr(a.address);
       html+='<div class="modal-agent" onclick="window.startChatWith(\''+a.address+'\')">'+
         '<div class="modal-agent-avatar" style="background:'+color+'">'+avatarChars(a.address)+'</div>'+
         '<div class="modal-agent-info">'+
@@ -1160,11 +1160,11 @@ window.searchAgents=function(q){
 
 window.startDirectChat=async function(){
   var val=document.getElementById('directAddress').value.trim();
-  if(!val){document.getElementById('newChatStatus').className='compose-status err';document.getElementById('newChatStatus').textContent='Enter a handle or address';return}
-  // Check if it's a handle (starts with @ or is short alphanumeric)
-  var handle=val.replace(/^@/,'').toLowerCase();
-  if(handle.length<44&&/^[a-z0-9-]+$/.test(handle)){
-    // Try to resolve handle
+  if(!val){document.getElementById('newChatStatus').className='compose-status err';document.getElementById('newChatStatus').textContent='Enter an address';return}
+  // Strip @clawlink.app suffix if present, or leading @
+  var handle=val.replace(/@clawlink\\.app$/i,'').replace(/^@/,'').toLowerCase();
+  // If it looks like a handle (short, alphanumeric), try to resolve
+  if(handle.length<44&&/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(handle)||/^[a-z0-9]{1,2}$/.test(handle)){
     try{
       var r=await fetch('https://api.clawlink.app/api/handle/'+handle);
       if(r.ok){
@@ -1174,7 +1174,6 @@ window.startDirectChat=async function(){
         return;
       }
     }catch(e){}
-    // If not a handle, maybe it's a short address portion — fall through
   }
   // Treat as address
   window.startChatWith(val);
@@ -1209,7 +1208,7 @@ window.startChatWith=async function(recipientAddr){
   document.getElementById('welcomeState').style.display='none';
   document.getElementById('chatView').style.display='flex';
   document.getElementById('chatName').textContent=displayName(recipientAddr);
-  document.getElementById('chatStatus').textContent=recipientAddr;
+  document.getElementById('chatStatus').textContent=handleMap[recipientAddr]?truncAddr(recipientAddr):recipientAddr;
   document.getElementById('chatAvatar').textContent=avatarChars(recipientAddr);
   document.getElementById('chatAvatar').style.background=avatarColor(recipientAddr);
   document.getElementById('messagesInner').innerHTML='<div style="text-align:center;color:#667781;padding:40px;font-size:0.85rem">Start a conversation! \\ud83d\\udcac</div>';
