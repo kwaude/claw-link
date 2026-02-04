@@ -1,18 +1,18 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::token::{self, Token, TokenAccount, Mint, Transfer as TokenTransfer, MintTo};
+use anchor_spl::token::{self, Token, TokenAccount, Mint, Transfer as TokenTransfer};
 
-declare_id!("DpVYsUBZ9f8Lny2xvPUK6E8RWxBA7pBh2XRLHWUu9jHP");
+declare_id!("AV9QieTmdg2hFWsaZ3uTJRJuqqbhQCYFjn1fGiSYPTNe");
 
 /// ══════════════════════════════════════════════════════════════════════
-/// Claw Cash Protocol v2 — Tornado Cash-style Private Payment Mixer
+/// Claw Link Payments — Tornado Cash-style Private Payment Mixer
 /// ══════════════════════════════════════════════════════════════════════
 ///
 /// Architecture:
 ///   - Fixed denomination pools (0.1, 1, 10 SOL) for anonymity
 ///   - Incremental Merkle tree of commitments per pool
 ///   - Nullifier tracking to prevent double-spend
-///   - CLAWCASH token fee gating on deposits
+///   - CLINK token fee gating on deposits
 ///   - Simplified commitment/reveal (devnet) — swappable for ZK proofs
 ///
 /// Privacy Model (devnet — simplified):
@@ -41,14 +41,11 @@ pub const POOL_DENOMINATIONS: [u64; 3] = [
     10_000_000_000,   // Pool 2: 10 SOL
 ];
 
-/// Default CLAWCASH fee per deposit (in token base units, 6 decimals)
-pub const DEFAULT_FEE: u64 = 100_000_000; // 100 CLAWCASH (6 decimals)
+/// Default CLINK fee per deposit (in token base units, 9 decimals)
+pub const DEFAULT_FEE: u64 = 10_000_000_000; // 10 CLINK (9 decimals)
 
 /// Zero value for empty Merkle tree leaves
 pub const ZERO_VALUE: [u8; 32] = [0u8; 32];
-
-/// Amount of CLAWCASH dispensed by the devnet faucet (1,000 tokens, 6 decimals)
-pub const FAUCET_AMOUNT: u64 = 1_000_000_000;
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -90,7 +87,7 @@ fn zero_hashes() -> [[u8; 32]; MERKLE_TREE_DEPTH] {
 // ─── Program ────────────────────────────────────────────────────────
 
 #[program]
-pub mod claw_cash_protocol {
+pub mod claw_link_payments {
     use super::*;
 
     /// Initialize the protocol configuration.
@@ -100,12 +97,12 @@ pub mod claw_cash_protocol {
     ) -> Result<()> {
         let config = &mut ctx.accounts.config;
         config.authority = ctx.accounts.authority.key();
-        config.clawcash_mint = ctx.accounts.clawcash_mint.key();
+        config.clink_mint = ctx.accounts.clink_mint.key();
         config.fee_amount = fee_amount;
         config.treasury = ctx.accounts.treasury.key();
         config.bump = ctx.bumps.config;
         config.treasury_bump = ctx.bumps.treasury;
-        msg!("Claw Cash Protocol v2 initialized. Fee: {} CLAWCASH", fee_amount);
+        msg!("Claw Link Payments initialized. Fee: {} CLINK", fee_amount);
         Ok(())
     }
 
@@ -114,7 +111,7 @@ pub mod claw_cash_protocol {
         ctx: Context<InitializePool>,
         pool_id: u8,
     ) -> Result<()> {
-        require!(pool_id < 3, ClawCashError::InvalidPool);
+        require!(pool_id < 3, ClawLinkError::InvalidPool);
 
         let pool = &mut ctx.accounts.pool;
         pool.pool_id = pool_id;
@@ -136,34 +133,34 @@ pub mod claw_cash_protocol {
     }
 
     /// Deposit SOL into a pool.
-    /// Requires CLAWCASH token fee and adds commitment to Merkle tree.
+    /// Requires CLINK token fee and adds commitment to Merkle tree.
     pub fn deposit(
         ctx: Context<DepositCtx>,
         commitment: [u8; 32],
         pool_id: u8,
         leaf_index: u32,
     ) -> Result<()> {
-        require!(pool_id < 3, ClawCashError::InvalidPool);
+        require!(pool_id < 3, ClawLinkError::InvalidPool);
 
         let pool = &mut ctx.accounts.pool;
         let denomination = pool.denomination;
 
-        require!(pool.pool_id == pool_id, ClawCashError::InvalidPool);
-        require!(pool.next_index < MAX_LEAVES, ClawCashError::MerkleTreeFull);
-        require!(leaf_index == pool.next_index, ClawCashError::InvalidProof);
+        require!(pool.pool_id == pool_id, ClawLinkError::InvalidPool);
+        require!(pool.next_index < MAX_LEAVES, ClawLinkError::MerkleTreeFull);
+        require!(leaf_index == pool.next_index, ClawLinkError::InvalidProof);
 
-        // 1. Transfer CLAWCASH fee to treasury
+        // 1. Transfer CLINK fee to treasury
         let fee = ctx.accounts.config.fee_amount;
         if fee > 0 {
             let cpi_accounts = TokenTransfer {
-                from: ctx.accounts.depositor_clawcash.to_account_info(),
+                from: ctx.accounts.depositor_clink.to_account_info(),
                 to: ctx.accounts.treasury.to_account_info(),
                 authority: ctx.accounts.depositor.to_account_info(),
             };
             let cpi_program = ctx.accounts.token_program.to_account_info();
             let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
             token::transfer(cpi_ctx, fee)?;
-            msg!("CLAWCASH fee of {} collected", fee);
+            msg!("CLINK fee of {} collected", fee);
         }
 
         // 2. Transfer SOL denomination to vault PDA
@@ -229,13 +226,13 @@ pub mod claw_cash_protocol {
 
         // 1. Verify nullifier_hash matches nullifier_preimage
         let computed_nullifier = compute_nullifier(&nullifier_preimage);
-        require!(computed_nullifier == nullifier_hash, ClawCashError::InvalidProof);
+        require!(computed_nullifier == nullifier_hash, ClawLinkError::InvalidProof);
 
         // 2. Compute and verify commitment
         let commitment = compute_commitment(&secret, &nullifier_preimage);
 
         // Verify Merkle proof
-        require!(proof.len() == MERKLE_TREE_DEPTH, ClawCashError::InvalidProof);
+        require!(proof.len() == MERKLE_TREE_DEPTH, ClawLinkError::InvalidProof);
         let mut current_hash = commitment;
         let mut index = leaf_index;
         for i in 0..MERKLE_TREE_DEPTH {
@@ -246,7 +243,7 @@ pub mod claw_cash_protocol {
             }
             index /= 2;
         }
-        require!(current_hash == pool.current_root, ClawCashError::InvalidProof);
+        require!(current_hash == pool.current_root, ClawLinkError::InvalidProof);
 
         // 3. Record nullifier (account init prevents double-spend)
         let nullifier_account = &mut ctx.accounts.nullifier_account;
@@ -254,10 +251,10 @@ pub mod claw_cash_protocol {
         nullifier_account.pool_id = pool.pool_id;
         nullifier_account.bump = ctx.bumps.nullifier_account;
 
-        // 3. Transfer SOL from vault to recipient via CPI with PDA signing
+        // 4. Transfer SOL from vault to recipient via CPI with PDA signing
         let denomination = pool.denomination;
         let vault_lamports = ctx.accounts.vault.to_account_info().lamports();
-        require!(vault_lamports >= denomination, ClawCashError::InsufficientVaultBalance);
+        require!(vault_lamports >= denomination, ClawLinkError::InsufficientVaultBalance);
 
         let pool_id_bytes = pool.pool_id.to_le_bytes();
         let vault_bump_bytes = [pool.vault_bump];
@@ -284,36 +281,25 @@ pub mod claw_cash_protocol {
         Ok(())
     }
 
-    /// Update the CLAWCASH fee amount (authority only).
+    /// Update the CLINK fee amount (authority only).
     pub fn update_fee(ctx: Context<UpdateConfig>, new_fee: u64) -> Result<()> {
         let config = &mut ctx.accounts.config;
         config.fee_amount = new_fee;
-        msg!("Fee updated to {} CLAWCASH", new_fee);
+        msg!("Fee updated to {} CLINK", new_fee);
         Ok(())
     }
 
-    /// Devnet faucet: mint 1,000 CLAWCASH test tokens to any agent.
-    /// The config PDA is the mint authority for the devnet CLAWCASH mint.
-    /// Anyone can call this — it's devnet, tokens have no real value.
-    pub fn claim_test_tokens(ctx: Context<ClaimTestTokens>) -> Result<()> {
-        let config = &ctx.accounts.config;
-        let bump = config.bump;
-        let signer_seeds: &[&[u8]] = &[b"config", &[bump]];
+    /// Close the config PDA and reclaim rent (authority only).
+    /// Used when resetting protocol state for redeployment.
+    pub fn close_config(ctx: Context<CloseConfig>) -> Result<()> {
+        msg!("Config PDA closed by authority {}", ctx.accounts.authority.key());
+        Ok(())
+    }
 
-        token::mint_to(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                MintTo {
-                    mint: ctx.accounts.clawcash_mint.to_account_info(),
-                    to: ctx.accounts.recipient_token_account.to_account_info(),
-                    authority: ctx.accounts.config.to_account_info(),
-                },
-                &[signer_seeds],
-            ),
-            FAUCET_AMOUNT,
-        )?;
-
-        msg!("Dispensed {} CLAWCASH test tokens", FAUCET_AMOUNT);
+    /// Close a pool PDA and reclaim rent (authority only).
+    /// Used when resetting protocol state for redeployment.
+    pub fn close_pool(ctx: Context<ClosePool>, _pool_id: u8) -> Result<()> {
+        msg!("Pool PDA closed by authority {}", ctx.accounts.authority.key());
         Ok(())
     }
 }
@@ -331,12 +317,12 @@ pub struct Initialize<'info> {
     )]
     pub config: Account<'info, ProtocolConfig>,
 
-    pub clawcash_mint: Account<'info, Mint>,
+    pub clink_mint: Account<'info, Mint>,
 
     #[account(
         init,
         payer = authority,
-        token::mint = clawcash_mint,
+        token::mint = clink_mint,
         token::authority = config,
         seeds = [b"treasury"],
         bump
@@ -379,7 +365,7 @@ pub struct InitializePool<'info> {
 
     #[account(
         mut,
-        constraint = authority.key() == config.authority @ ClawCashError::Unauthorized
+        constraint = authority.key() == config.authority @ ClawLinkError::Unauthorized
     )]
     pub authority: Signer<'info>,
 
@@ -420,13 +406,13 @@ pub struct DepositCtx<'info> {
     )]
     pub commitment_leaf: Account<'info, CommitmentLeaf>,
 
-    /// Depositor's CLAWCASH token account (fee source)
+    /// Depositor's CLINK token account (fee source)
     #[account(
         mut,
-        constraint = depositor_clawcash.mint == config.clawcash_mint @ ClawCashError::InvalidMint,
-        constraint = depositor_clawcash.owner == depositor.key() @ ClawCashError::InvalidOwner,
+        constraint = depositor_clink.mint == config.clink_mint @ ClawLinkError::InvalidMint,
+        constraint = depositor_clink.owner == depositor.key() @ ClawLinkError::InvalidOwner,
     )]
-    pub depositor_clawcash: Account<'info, TokenAccount>,
+    pub depositor_clink: Account<'info, TokenAccount>,
 
     /// Treasury token account (fee destination)
     #[account(
@@ -488,7 +474,7 @@ pub struct UpdateConfig<'info> {
         mut,
         seeds = [b"config"],
         bump = config.bump,
-        constraint = config.authority == authority.key() @ ClawCashError::Unauthorized,
+        constraint = config.authority == authority.key() @ ClawLinkError::Unauthorized,
     )]
     pub config: Account<'info, ProtocolConfig>,
 
@@ -496,31 +482,50 @@ pub struct UpdateConfig<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ClaimTestTokens<'info> {
+pub struct CloseConfig<'info> {
     #[account(
+        mut,
         seeds = [b"config"],
         bump = config.bump,
+        constraint = config.authority == authority.key() @ ClawLinkError::Unauthorized,
+        close = authority,
     )]
     pub config: Account<'info, ProtocolConfig>,
 
-    /// The devnet CLAWCASH mint (config PDA must be mint authority)
+    /// Treasury token account — must also be closed
     #[account(
         mut,
-        constraint = clawcash_mint.key() == config.clawcash_mint @ ClawCashError::InvalidMint,
+        seeds = [b"treasury"],
+        bump = config.treasury_bump,
     )]
-    pub clawcash_mint: Account<'info, Mint>,
-
-    /// Recipient's CLAWCASH token account
-    #[account(
-        mut,
-        constraint = recipient_token_account.mint == config.clawcash_mint @ ClawCashError::InvalidMint,
-    )]
-    pub recipient_token_account: Account<'info, TokenAccount>,
+    pub treasury: Account<'info, TokenAccount>,
 
     #[account(mut)]
-    pub payer: Signer<'info>,
+    pub authority: Signer<'info>,
 
     pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+#[instruction(pool_id: u8)]
+pub struct ClosePool<'info> {
+    #[account(
+        mut,
+        seeds = [b"pool", pool_id.to_le_bytes().as_ref()],
+        bump = pool.bump,
+        close = authority,
+    )]
+    pub pool: Account<'info, Pool>,
+
+    #[account(
+        seeds = [b"config"],
+        bump = config.bump,
+        constraint = config.authority == authority.key() @ ClawLinkError::Unauthorized,
+    )]
+    pub config: Account<'info, ProtocolConfig>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
 }
 
 // ─── State Accounts ─────────────────────────────────────────────────
@@ -529,7 +534,7 @@ pub struct ClaimTestTokens<'info> {
 #[derive(InitSpace)]
 pub struct ProtocolConfig {
     pub authority: Pubkey,        // 32
-    pub clawcash_mint: Pubkey,    // 32
+    pub clink_mint: Pubkey,       // 32
     pub fee_amount: u64,          // 8
     pub treasury: Pubkey,         // 32
     pub bump: u8,                 // 1
@@ -569,7 +574,7 @@ pub struct NullifierAccount {
 // ─── Errors ─────────────────────────────────────────────────────────
 
 #[error_code]
-pub enum ClawCashError {
+pub enum ClawLinkError {
     #[msg("Invalid pool ID (must be 0, 1, or 2)")]
     InvalidPool,
     #[msg("Merkle tree is full")]
@@ -580,7 +585,7 @@ pub enum ClawCashError {
     NullifierAlreadyUsed,
     #[msg("Insufficient vault balance")]
     InsufficientVaultBalance,
-    #[msg("Invalid CLAWCASH mint")]
+    #[msg("Invalid CLINK mint")]
     InvalidMint,
     #[msg("Invalid token account owner")]
     InvalidOwner,

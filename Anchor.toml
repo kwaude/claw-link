@@ -5,8 +5,8 @@ seeds = false
 skip-lint = false
 
 [programs.devnet]
-messaging = "4t5tX2fELbKCEymX4KWEA3voWp1Fxe8fbfPP3xKtyNxR"
-payments = "DpVYsUBZ9f8Lny2xvPUK6E8RWxBA7pBh2XRLHWUu9jHP"
+claw_link_payments = "AV9QieTmdg2hFWsaZ3uTJRJuqqbhQCYFjn1fGiSYPTNe"
+clawlink_protocol = "EcXmncQ6pBhNfVKqKWufNNFKxQ7g84sVKcokukauZLqb"
 
 [registry]
 url = "https://api.apr.dev"

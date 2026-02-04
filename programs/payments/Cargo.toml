@@ -1,12 +1,12 @@
 [package]
-name = "claw-cash-protocol"
-version = "0.2.0"
-description = "Claw Cash Protocol v2 — Tornado Cash-style private payment mixer on Solana"
+name = "claw-link-payments"
+version = "0.3.0"
+description = "Claw Link Payments — Tornado Cash-style private payment mixer on Solana (CLINK token)"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "claw_cash_protocol"
+name = "claw_link_payments"
 
 [features]
 default = []
