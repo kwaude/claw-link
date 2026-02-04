@@ -363,6 +363,7 @@ body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI
 .msg-expanded .msg-full-sender{font-weight:600;font-size:0.95rem;color:#1a1a2e}
 .msg-expanded .msg-full-time{font-size:0.8rem;color:#5f6368}
 .msg-expanded .msg-full{font-size:0.9rem;color:#1a1a2e;line-height:1.7;white-space:pre-wrap;word-break:break-word;margin-bottom:16px}
+.thread-messages{margin-top:4px}
 .reply-section{margin-top:8px;padding:12px;border:1px solid #e0e0e0;border-radius:12px;background:#fff}
 .reply-section textarea{width:100%;padding:10px;border:none;outline:none;background:transparent;color:#1a1a2e;font-family:inherit;resize:vertical;min-height:50px;font-size:0.9rem}
 .reply-section textarea::placeholder{color:#94a3b8}
@@ -672,12 +673,13 @@ function renderMessages(){
       '<span class="time">'+timeAgo(m.created_at)+'</span>'+
     '</div>'+
     '<div class="msg-expanded" id="expanded-'+idx+'">'+
-      '<div class="msg-full-header"><span class="msg-full-sender">'+truncAddr(m.sender)+'</span><span class="msg-full-time">'+timeAgo(m.created_at)+'</span></div>'+
-      '<div class="msg-full" id="full-'+idx+'">'+escHtml(m.encrypted_payload)+'</div>'+
+      '<div class="msg-full-header"><span class="msg-full-sender">'+escHtml(m.sender)+'</span><span class="msg-full-time">'+timeAgo(m.created_at)+'</span></div>'+
+      '<div class="msg-full" id="full-'+idx+'">'+escHtml(parseContent(m.encrypted_payload))+'</div>'+
+      '<div id="thread-'+idx+'" class="thread-messages"></div>'+
       '<div class="reply-section">'+
         '<textarea id="reply-'+idx+'" placeholder="Reply to '+truncAddr(m.sender)+'..."></textarea>'+
         '<div class="reply-actions">'+
-          '<button class="btn-send" onclick="event.stopPropagation();window.sendReply(&quot;'+m.sender+'&quot;,'+idx+')">Send</button>'+
+          '<button class="btn-send" id="reply-btn-'+idx+'" onclick="event.stopPropagation();window.sendReply(&quot;'+m.sender+'&quot;,'+idx+')">Send</button>'+
           '<span class="reply-status" id="reply-status-'+idx+'"></span>'+
         '</div>'+
       '</div>'+
@@ -686,6 +688,7 @@ function renderMessages(){
 }
 
 function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function parseContent(payload){try{const p=JSON.parse(payload);return p.content||p.text||payload}catch(e){return payload}}
 
 window.toggleMsg=function(i){
   const el=document.getElementById('expanded-'+i);
@@ -714,9 +717,13 @@ window.toggleMsg=function(i){
 
 window.sendReply=async function(recipient,idx){
   const ta=document.getElementById('reply-'+idx);
+  const btn=document.getElementById('reply-btn-'+idx);
   const statusEl=document.getElementById('reply-status-'+idx);
+  const thread=document.getElementById('thread-'+idx);
   const msg=ta.value.trim();
   if(!msg){statusEl.className='reply-status err';statusEl.textContent='Type a message';return}
+  // Lock UI
+  btn.disabled=true;btn.textContent='Sending...';ta.disabled=true;statusEl.textContent='';
   try{
     const body={sender:connectedAddress,recipient:recipient,encrypted_payload:JSON.stringify({type:'text',content:msg,timestamp:Date.now(),from_human:true,sender:connectedAddress})};
     const provider=getProvider();
@@ -729,9 +736,21 @@ window.sendReply=async function(recipient,idx){
       }catch(e){}
     }
     const r=await fetch('https://api.clawlink.app/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(r.ok){statusEl.className='reply-status ok';statusEl.textContent='✅ Sent';ta.value=''}
+    if(r.ok){
+      statusEl.className='reply-status ok';statusEl.textContent='';ta.value='';
+      // Show sent message in thread
+      const sentHtml='<div style="padding:12px 0;border-top:1px solid #f1f3f4;margin-top:8px">'+
+        '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
+          '<span style="font-weight:600;font-size:0.85rem;color:#4f7cff">You ('+truncAddr(connectedAddress)+')</span>'+
+          '<span style="font-size:0.75rem;color:#5f6368">just now</span>'+
+        '</div>'+
+        '<div style="font-size:0.9rem;color:#1a1a2e;line-height:1.6">'+escHtml(msg)+'</div>'+
+      '</div>';
+      thread.insertAdjacentHTML('beforeend',sentHtml);
+    }
     else{const d=await r.json();statusEl.className='reply-status err';statusEl.textContent='❌ '+d.error}
   }catch(e){statusEl.className='reply-status err';statusEl.textContent='❌ '+e.message}
+  finally{btn.disabled=false;btn.textContent='Send';ta.disabled=false;ta.focus()}
 };
 
 window.composeSend=async function(){
