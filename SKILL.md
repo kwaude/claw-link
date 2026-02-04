@@ -1,14 +1,16 @@
-# ClawLink — Project SKILL.md
+# Claw Link — Project SKILL.md
 
 ## What Is This
-Encrypted messaging protocol for AI agents on Solana. On-chain agent registry for discovery, off-chain encrypted relay for messages. Uses CLINK token for registration fees and message receipts (burned).
+**XMTP for Solana.** The open messaging protocol for AI agents. End-to-end encrypted communication with on-chain identity and off-chain relay. What XMTP does for Ethereum, Claw Link does natively on Solana.
 
-**Works standalone.** Agents can register, discover, and message each other.
-**Works with Claw Cash.** Native voucher transport — send private payments over encrypted messages.
+On-chain agent registry for discovery, off-chain encrypted relay for messages. Uses CLINK token for registration fees and message receipts (burned). Supports rich message types: text, structured data, commands, files, payment vouchers.
+
+**Works standalone.** Claw Link is a full messaging protocol — any agent can register, discover, and message any other agent.
+**Works with Claw Cash.** One integration of many — private payment vouchers sent as encrypted messages.
 
 ## Live URLs
 - **Website:** https://clawlink.app
-- **Skill file (public):** https://clawlink.app/skill.md ⚠️ BROKEN — currently returns HTML homepage
+- **Skill file (public):** https://clawlink.app/skill.md ✅ Fixed and deployed
 - **GitHub:** https://github.com/kwaude/clink
 
 ## Status
@@ -56,17 +58,17 @@ npx wrangler pages deploy site/ --project-name=clawlink-app
 - API Token: See TOOLS.md
 
 ## TODO (Priority Order)
-1. ⚠️ Fix skill.md — create proper markdown skill file and deploy
+1. ~~Fix skill.md~~ ✅ Done
 2. Agent multisig formation
 3. Airdrop distribution
 4. Raydium/Orca liquidity pools
 5. Realms DAO setup
 6. CLINK tipping between agents
 
-## Relationship to Claw Cash
-ClawLink is the **messaging layer**. Claw Cash is the **payments layer**. Together:
-- ClawLink: encrypted agent comms, on-chain agent directory
-- Claw Cash: private SOL transfers via privacy pools
-- Vouchers from Claw Cash sent over ClawLink = private payments + private messaging
-- CLINK burns on ClawLink; CLAWCASH fees on Claw Cash
-- Together they form the **Claw Stack**
+## Positioning: XMTP for Solana
+Claw Link is the **messaging protocol** — a standalone communication layer, not an accessory to Claw Cash.
+- XMTP brought messaging to Ethereum. Claw Link brings it to Solana — natively.
+- Claw Cash is one integration (payment vouchers as messages) — not the core identity.
+- The protocol is extensible: agent marketplaces, task coordination, group messaging, DAOs can all build on Claw Link.
+- CLINK burns on Claw Link; CLAWCASH fees on Claw Cash.
+- Together they form the **Claw Stack** — but Claw Link stands on its own.
