@@ -264,7 +264,7 @@ window.sendMsg=async function(){
   });
 }
 
-// Human inbox page HTML - Threaded Conversations
+// Human inbox page HTML - WhatsApp/Signal-style Chat UI
 function inboxPage(): Response {
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -274,697 +274,750 @@ function inboxPage(): Response {
 <title>Inbox — Claw Link</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f6f8fc;color:#1a1a2e;min-height:100vh;overflow:hidden}
-
-/* ─── Top Bar ─── */
-.topbar{height:64px;background:#fff;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;padding:0 16px;position:fixed;top:0;left:0;right:0;z-index:100}
-.topbar-left{display:flex;align-items:center;gap:12px;min-width:200px}
-.hamburger{display:none;background:none;border:none;font-size:1.4rem;cursor:pointer;padding:8px;border-radius:50%;color:#5f6368}
-.hamburger:hover{background:#f1f3f4}
-.logo{font-size:1.25rem;font-weight:600;color:#1a1a2e;display:flex;align-items:center;gap:8px;text-decoration:none}
-.logo span{color:#4f7cff}
-.topbar-center{flex:1;max-width:720px;margin:0 auto;padding:0 16px}
-.search-bar{display:flex;align-items:center;background:#edf2fc;border-radius:28px;padding:0 16px;height:46px;transition:background 0.2s,box-shadow 0.2s}
-.search-bar:focus-within{background:#fff;box-shadow:0 1px 6px rgba(32,33,36,0.28)}
-.search-bar svg{width:20px;height:20px;fill:#5f6368;flex-shrink:0}
-.search-bar input{border:none;background:transparent;outline:none;font-size:0.95rem;padding:0 12px;width:100%;color:#1a1a2e}
-.search-bar input::placeholder{color:#5f6368}
-.topbar-right{display:flex;align-items:center;gap:8px;min-width:200px;justify-content:flex-end}
-.btn-refresh{background:none;border:none;cursor:pointer;padding:8px;border-radius:50%;font-size:1.2rem;color:#5f6368;transition:background 0.2s}
-.btn-refresh:hover{background:#f1f3f4}
-.btn-refresh:active{transform:rotate(180deg)}
-.wallet-btn{display:flex;align-items:center;gap:8px;background:#4f7cff;color:#fff;border:none;border-radius:24px;padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:500;transition:background 0.2s}
-.wallet-btn:hover{background:#3b68e8}
-.wallet-avatar{width:32px;height:32px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;cursor:pointer;position:relative;text-transform:uppercase}
-.wallet-dropdown{position:absolute;top:44px;right:0;background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.15);padding:16px;min-width:260px;display:none;z-index:200}
-.wallet-dropdown.show{display:block}
-.wallet-dropdown .addr-full{font-family:monospace;font-size:0.75rem;color:#5f6368;word-break:break-all;margin-bottom:12px;padding:8px;background:#f6f8fc;border-radius:6px}
-.wallet-dropdown .btn-disconnect{width:100%;padding:8px 16px;background:transparent;border:1px solid #d93025;color:#d93025;border-radius:8px;cursor:pointer;font-size:0.85rem;transition:background 0.2s}
-.wallet-dropdown .btn-disconnect:hover{background:#d9302511}
-
-/* ─── Layout ─── */
-.layout{display:flex;height:calc(100vh - 64px);margin-top:64px}
-
-/* ─── Sidebar ─── */
-.sidebar{width:256px;background:#f6f8fc;padding:8px 12px;overflow-y:auto;flex-shrink:0;border-right:1px solid #e0e0e0}
-.compose-btn{display:flex;align-items:center;gap:12px;background:#c2e7ff;color:#001d35;border:none;border-radius:16px;padding:16px 24px;cursor:pointer;font-size:0.9rem;font-weight:500;margin-bottom:4px;transition:box-shadow 0.2s;width:auto}
-.compose-btn:hover{box-shadow:0 1px 3px rgba(0,0,0,0.2)}
-.compose-btn svg{width:24px;height:24px;fill:#001d35}
-.sidebar-nav{list-style:none;margin-top:4px}
-.sidebar-nav li a{display:flex;align-items:center;gap:16px;padding:8px 24px 8px 12px;border-radius:0 24px 24px 0;color:#1a1a2e;text-decoration:none;font-size:0.875rem;font-weight:500;transition:background 0.15s;cursor:pointer}
-.sidebar-nav li a:hover{background:#dfe3e8}
-.sidebar-nav li a.active{background:#d3e3fd;color:#001d35;font-weight:700}
-.sidebar-nav li a svg{width:20px;height:20px;fill:#444746;flex-shrink:0}
-.sidebar-nav li a.active svg{fill:#001d35}
-.nav-badge{margin-left:auto;background:#d93025;color:#fff;font-size:0.7rem;font-weight:700;padding:1px 7px;border-radius:10px;min-width:18px;text-align:center}
-.sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid #e0e0e0;font-size:0.75rem;color:#5f6368;text-align:center}
-.sidebar-footer a{color:#4f7cff;text-decoration:none}
-
-/* ─── Main Content ─── */
-.main-content{flex:1;background:#fff;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
-.toolbar{display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid #e0e0e0;gap:8px;min-height:48px}
-.toolbar .select-all{width:18px;height:18px;cursor:pointer;accent-color:#4f7cff}
-.toolbar .msg-count{font-size:0.8rem;color:#5f6368;margin-left:auto}
-.toolbar .btn-back{background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 8px;border-radius:50%;color:#5f6368;transition:background 0.15s;display:none}
-.toolbar .btn-back:hover{background:#f1f3f4}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;height:100vh;overflow:hidden}
 
 /* ─── Login Screen ─── */
-.welcome-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px;text-align:center}
-.welcome-panel h2{font-size:1.3rem;color:#1a1a2e;margin-bottom:8px;font-weight:500}
-.welcome-panel p{color:#5f6368;font-size:0.9rem;margin-bottom:24px}
-.welcome-panel .btn-wallet-lg{padding:14px 32px;background:#4f7cff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;transition:background 0.2s;display:inline-flex;align-items:center;gap:10px}
-.welcome-panel .btn-wallet-lg:hover{background:#3b68e8}
-.no-phantom{margin-top:12px;padding:12px 20px;background:#fffbeb;border:1px solid #d9770666;border-radius:8px;color:#d97706;font-size:0.85rem;display:none}
-.no-phantom a{color:#4f7cff}
+#loginScreen{display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#4f7cff 0%,#6c63ff 100%);flex-direction:column;text-align:center;padding:40px}
+#loginScreen .login-card{background:#fff;border-radius:20px;padding:48px 40px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+#loginScreen .login-icon{font-size:3.5rem;margin-bottom:20px}
+#loginScreen h1{font-size:1.6rem;font-weight:700;margin-bottom:6px;color:#1a1a2e}
+#loginScreen .login-sub{color:#5f6368;font-size:0.95rem;margin-bottom:32px;line-height:1.5}
+.btn-connect{padding:14px 32px;background:#4f7cff;color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:1rem;font-weight:600;transition:all 0.2s;display:inline-flex;align-items:center;gap:10px;justify-content:center;width:100%}
+.btn-connect:hover{background:#3b68e8;transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,124,255,0.4)}
+.no-phantom-msg{margin-top:16px;padding:12px 20px;background:#fffbeb;border:1px solid #d9770666;border-radius:10px;color:#d97706;font-size:0.85rem;display:none}
+.no-phantom-msg a{color:#4f7cff}
+#loginScreen .login-footer{color:rgba(255,255,255,0.7);font-size:0.8rem;margin-top:24px}
 
-/* ─── Conversation List ─── */
-.conv-list{flex:1}
-.conv-row{display:flex;align-items:center;padding:0 16px;height:44px;border-bottom:1px solid #f1f3f4;cursor:pointer;transition:box-shadow 0.15s,background 0.1s;font-size:0.875rem;position:relative}
-.conv-row:hover{box-shadow:0 2px 6px rgba(0,0,0,0.08);z-index:1}
-.conv-row.unread{background:#fff;font-weight:600}
-.conv-row.read{background:#f6f8fc}
-.conv-row .cb{width:18px;height:18px;cursor:pointer;accent-color:#4f7cff;flex-shrink:0;margin-right:16px}
-.conv-row .participants{width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1a1a2e;flex-shrink:0;font-size:0.85rem}
-.conv-row.unread .participants{font-weight:700}
-.conv-row .preview-wrap{flex:1;display:flex;overflow:hidden;margin:0 12px;align-items:center}
-.conv-row .preview-text{color:#5f6368;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400}
-.conv-row .conv-badge{background:#4f7cff;color:#fff;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:8px;flex-shrink:0}
-.conv-row .time{white-space:nowrap;color:#5f6368;font-size:0.75rem;flex-shrink:0;min-width:60px;text-align:right}
-.conv-row.unread .time{color:#1a1a2e;font-weight:700}
+/* ─── App Shell ─── */
+#appShell{display:none;height:100vh;background:#f0f2f5}
+.app-container{display:flex;height:100vh;max-width:1600px;margin:0 auto;box-shadow:0 0 20px rgba(0,0,0,0.08)}
 
-/* ─── Thread View ─── */
-.thread-view{display:none;flex:1;flex-direction:column;overflow:hidden}
-.thread-header{padding:16px 24px;border-bottom:1px solid #e0e0e0;background:#fff}
-.thread-header h3{font-size:1rem;font-weight:600;margin-bottom:4px}
-.thread-participants{font-size:0.8rem;color:#5f6368;font-family:monospace}
-.thread-messages{flex:1;overflow-y:auto;padding:16px 24px}
-.thread-msg{margin-bottom:16px;display:flex;gap:12px;animation:fadeIn 0.2s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.thread-msg.mine{flex-direction:row-reverse}
-.thread-msg .avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;flex-shrink:0;text-transform:uppercase}
-.thread-msg .avatar.other{background:#e8eaed;color:#5f6368}
-.thread-msg .avatar.me{background:#4f7cff;color:#fff}
-.thread-msg .bubble{max-width:70%;padding:10px 14px;border-radius:12px;font-size:0.9rem;line-height:1.5;word-break:break-word;white-space:pre-wrap}
-.thread-msg .bubble.other{background:#f1f3f4;color:#1a1a2e;border-bottom-left-radius:4px}
-.thread-msg .bubble.me{background:#4f7cff;color:#fff;border-bottom-right-radius:4px}
-.thread-msg .bubble .msg-meta{font-size:0.7rem;margin-top:4px;opacity:0.7}
-.thread-msg.mine .bubble .msg-meta{text-align:right}
-.thread-reply{padding:12px 24px;border-top:1px solid #e0e0e0;background:#fff;display:flex;gap:8px;align-items:flex-end}
-.thread-reply textarea{flex:1;padding:10px 14px;border:1px solid #e0e0e0;border-radius:20px;outline:none;resize:none;font-family:inherit;font-size:0.9rem;min-height:40px;max-height:120px;color:#1a1a2e;line-height:1.4}
-.thread-reply textarea:focus{border-color:#4f7cff}
-.thread-reply textarea::placeholder{color:#94a3b8}
-.thread-reply .btn-send{width:40px;height:40px;border-radius:50%;background:#4f7cff;color:#fff;border:none;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:background 0.2s;flex-shrink:0}
-.thread-reply .btn-send:hover{background:#3b68e8}
-.thread-reply .btn-send:disabled{background:#e0e0e0;color:#94a3b8;cursor:not-allowed}
-.reply-status{font-size:0.75rem;padding:4px 24px;text-align:center}
-.reply-status.ok{color:#16a34a}
-.reply-status.err{color:#d93025}
+/* ─── Left Panel ─── */
+.left-panel{width:380px;background:#fff;display:flex;flex-direction:column;border-right:1px solid #e0e0e0;flex-shrink:0}
+.left-header{padding:12px 16px;background:#fff;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f2f5;min-height:60px}
+.left-header-left{display:flex;align-items:center;gap:12px}
+.header-avatar{width:40px;height:40px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;cursor:pointer;text-transform:uppercase;position:relative}
+.header-title{font-size:1.15rem;font-weight:700;color:#1a1a2e}
+.left-header-right{display:flex;align-items:center;gap:4px}
+.icon-btn{width:40px;height:40px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#54656f;font-size:1.2rem;transition:background 0.15s}
+.icon-btn:hover{background:#f0f2f5}
+.search-wrap{padding:8px 12px;border-bottom:1px solid #f0f2f5}
+.search-box{display:flex;align-items:center;background:#f0f2f5;border-radius:8px;padding:0 12px;height:36px;transition:background 0.2s}
+.search-box:focus-within{background:#fff;box-shadow:0 0 0 2px #4f7cff33}
+.search-box svg{width:16px;height:16px;fill:#54656f;flex-shrink:0}
+.search-box input{border:none;background:transparent;outline:none;font-size:0.85rem;padding:0 10px;width:100%;color:#1a1a2e}
+.search-box input::placeholder{color:#8696a0}
+.conv-list{flex:1;overflow-y:auto;overflow-x:hidden}
+.conv-item{display:flex;align-items:center;padding:12px 16px;cursor:pointer;transition:background 0.1s;border-bottom:1px solid #f7f8fa;gap:14px}
+.conv-item:hover{background:#f5f6f6}
+.conv-item.active{background:#f0f4ff}
+.conv-avatar{width:50px;height:50px;border-radius:50%;background:#dfe5e7;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.95rem;flex-shrink:0;text-transform:uppercase}
+.conv-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.conv-top{display:flex;align-items:center;justify-content:space-between}
+.conv-name{font-size:0.95rem;font-weight:500;color:#111b21;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-item.unread .conv-name{font-weight:700}
+.conv-time{font-size:0.72rem;color:#667781;flex-shrink:0;margin-left:8px}
+.conv-item.unread .conv-time{color:#4f7cff;font-weight:600}
+.conv-bottom{display:flex;align-items:center;justify-content:space-between}
+.conv-preview{font-size:0.83rem;color:#667781;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.conv-item.unread .conv-preview{color:#111b21;font-weight:500}
+.conv-badge{background:#4f7cff;color:#fff;font-size:0.7rem;font-weight:700;min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 6px;margin-left:8px;flex-shrink:0}
+.conv-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px 20px;text-align:center;color:#667781}
+.conv-empty .empty-icon{font-size:3rem;margin-bottom:12px;opacity:0.5}
+.conv-empty p{font-size:0.85rem;line-height:1.5}
 
-/* ─── Empty State ─── */
-.empty-state{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:60px 20px;text-align:center;width:100%}
-.empty-state svg{width:120px;height:120px;fill:#dadce0;margin-bottom:20px}
-.empty-state h3{font-size:1.1rem;color:#1a1a2e;margin-bottom:8px;font-weight:500}
-.empty-state p{color:#5f6368;font-size:0.85rem}
+/* ─── Right Panel ─── */
+.right-panel{flex:1;display:flex;flex-direction:column;background:#efeae2;min-width:0;position:relative}
 
-/* ─── Compose Modal ─── */
-.compose-modal{position:fixed;bottom:0;right:24px;width:560px;background:#fff;border-radius:12px 12px 0 0;box-shadow:0 -2px 20px rgba(0,0,0,0.2);z-index:300;display:none;flex-direction:column;overflow:hidden}
-.compose-modal.show{display:flex}
-.compose-modal.minimized{height:48px;overflow:hidden}
-.compose-modal .compose-header{display:flex;align-items:center;justify-content:space-between;background:#1a1a2e;color:#fff;padding:10px 16px;cursor:pointer;border-radius:12px 12px 0 0}
-.compose-modal .compose-header h4{font-size:0.9rem;font-weight:500}
-.compose-modal .compose-header-actions{display:flex;gap:4px}
-.compose-modal .compose-header-actions button{background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer;padding:4px 8px;border-radius:4px;opacity:0.8}
-.compose-modal .compose-header-actions button:hover{opacity:1;background:rgba(255,255,255,0.1)}
-.compose-modal .compose-body{padding:0;flex:1;display:flex;flex-direction:column}
-.compose-modal .compose-field{display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid #f1f3f4}
-.compose-modal .compose-field label{font-size:0.85rem;color:#5f6368;width:50px;flex-shrink:0}
-.compose-modal .compose-field input{border:none;outline:none;flex:1;font-size:0.9rem;padding:4px 0;font-family:inherit;color:#1a1a2e}
-.compose-modal .compose-field input::placeholder{color:#b0b8c1}
-.compose-modal .compose-field .field-hint{font-size:0.7rem;color:#94a3b8;margin-left:8px;white-space:nowrap}
-.compose-modal .compose-field{position:relative}
-.autocomplete{position:absolute;top:100%;left:50px;right:0;background:#fff;border:1px solid #e0e0e0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-height:200px;overflow-y:auto;z-index:400;display:none}
-.autocomplete.show{display:block}
-.autocomplete-item{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:0.85rem;transition:background 0.1s}
-.autocomplete-item:hover{background:#edf2fc}
-.autocomplete-item .ac-name{font-weight:600;color:#1a1a2e}
-.autocomplete-item .ac-addr{font-family:monospace;font-size:0.75rem;color:#5f6368}
-.autocomplete-item .ac-skills{font-size:0.7rem;color:#16a34a}
-.ac-avatar{width:28px;height:28px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;flex-shrink:0;text-transform:uppercase}
-.compose-modal .compose-textarea{flex:1;padding:12px 16px;border:none;outline:none;resize:none;font-size:0.9rem;font-family:inherit;min-height:300px;color:#1a1a2e}
-.compose-modal .compose-textarea::placeholder{color:#b0b8c1}
-.compose-modal .compose-footer{display:flex;align-items:center;padding:12px 16px;border-top:1px solid #f1f3f4;gap:12px}
-.compose-modal .compose-footer .btn-send{padding:8px 24px;background:#4f7cff;color:#fff;border:none;border-radius:18px;cursor:pointer;font-size:0.85rem;font-weight:600;transition:background 0.2s}
-.compose-modal .compose-footer .btn-send:hover{background:#3b68e8}
-.compose-status{font-size:0.8rem}
+/* Welcome State */
+.welcome-state{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px;background:#f0f2f5;position:relative}
+.welcome-state .welcome-icon{font-size:4rem;margin-bottom:20px;opacity:0.8}
+.welcome-state h2{font-size:1.3rem;font-weight:400;color:#41525d;margin-bottom:8px}
+.welcome-state p{font-size:0.85rem;color:#667781;max-width:400px;line-height:1.5}
+.welcome-state .powered{position:absolute;bottom:20px;font-size:0.75rem;color:#8696a0}
+.welcome-state .powered a{color:#4f7cff;text-decoration:none}
+
+/* Chat Header */
+.chat-header{padding:10px 16px;background:#fff;display:flex;align-items:center;gap:14px;border-bottom:1px solid #e0e0e0;min-height:60px;z-index:2}
+.chat-header .back-btn{display:none;width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;font-size:1.2rem;color:#54656f;flex-shrink:0}
+.chat-header .back-btn:hover{background:#f0f2f5}
+.chat-header-avatar{width:42px;height:42px;border-radius:50%;background:#dfe5e7;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;text-transform:uppercase}
+.chat-header-info{flex:1;min-width:0}
+.chat-header-name{font-size:1rem;font-weight:600;color:#111b21;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-header-status{font-size:0.75rem;color:#667781;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Messages Area */
+.messages-area{flex:1;overflow-y:auto;padding:20px 60px;position:relative;display:flex;flex-direction:column}
+.messages-inner{display:flex;flex-direction:column;gap:2px;margin-top:auto}
+.date-divider{display:flex;align-items:center;justify-content:center;margin:12px 0}
+.date-divider span{background:#fff;color:#54656f;font-size:0.72rem;padding:5px 12px;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,0.08);font-weight:500}
+
+/* Chat Bubbles */
+.bubble-row{display:flex;margin-bottom:2px}
+.bubble-row.mine{justify-content:flex-end}
+.bubble-row.theirs{justify-content:flex-start}
+.bubble{max-width:65%;padding:8px 12px;font-size:0.9rem;line-height:1.4;word-break:break-word;white-space:pre-wrap;position:relative;box-shadow:0 1px 1px rgba(0,0,0,0.08)}
+.bubble-them{background:#fff;border-radius:0 8px 8px 8px}
+.bubble-them.tail{border-radius:8px 8px 8px 0}
+.bubble-me{background:#d9fdd3;color:#111b21;border-radius:8px 0 8px 8px}
+.bubble-me.tail{border-radius:8px 8px 0 8px}
+.bubble .sender-label{font-size:0.72rem;font-weight:600;color:#4f7cff;margin-bottom:2px;display:block}
+.bubble .msg-time{font-size:0.65rem;color:#667781;float:right;margin-left:12px;margin-top:4px;display:flex;align-items:center;gap:3px}
+.bubble .msg-text{display:inline}
+.msg-tail-spacer{display:inline-block;width:60px}
+
+/* Input Bar */
+.input-bar{padding:8px 16px;background:#f0f2f5;display:flex;align-items:flex-end;gap:8px;border-top:1px solid #e0e0e0}
+.input-wrap{flex:1;position:relative}
+.input-wrap textarea{width:100%;background:#fff;border-radius:8px;padding:10px 14px;border:none;outline:none;font-size:0.9rem;font-family:inherit;resize:none;min-height:42px;max-height:120px;line-height:1.4;color:#111b21}
+.input-wrap textarea::placeholder{color:#8696a0}
+.btn-send{width:42px;height:42px;border-radius:50%;background:#4f7cff;color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;flex-shrink:0;font-size:1.1rem}
+.btn-send:hover{background:#3b68e8}
+.btn-send:disabled{background:#b0bec5;cursor:not-allowed}
+.input-status{font-size:0.72rem;color:#667781;padding:2px 16px;text-align:center}
+.input-status.err{color:#d93025}
+
+/* ─── New Chat Modal ─── */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:500;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f0f2f5}
+.modal-header h3{font-size:1rem;font-weight:600;color:#111b21}
+.modal-close{width:32px;height:32px;border-radius:50%;border:none;background:transparent;cursor:pointer;font-size:1.2rem;color:#54656f;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:#f0f2f5}
+.modal-body{padding:16px 20px}
+.modal-search{width:100%;padding:10px 14px;border:1px solid #e0e0e0;border-radius:8px;font-size:0.9rem;outline:none;font-family:inherit;color:#111b21}
+.modal-search:focus{border-color:#4f7cff}
+.modal-search::placeholder{color:#8696a0}
+.modal-results{max-height:300px;overflow-y:auto;margin-top:8px}
+.modal-agent{display:flex;align-items:center;gap:12px;padding:10px 8px;cursor:pointer;border-radius:8px;transition:background 0.1s}
+.modal-agent:hover{background:#f0f4ff}
+.modal-agent-avatar{width:42px;height:42px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0;text-transform:uppercase}
+.modal-agent-info{flex:1;min-width:0}
+.modal-agent-name{font-size:0.9rem;font-weight:600;color:#111b21}
+.modal-agent-addr{font-size:0.75rem;color:#667781;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal-agent-skills{font-size:0.72rem;color:#16a34a;margin-top:2px}
+.modal-divider{padding:12px 20px 6px;font-size:0.75rem;color:#667781;font-weight:500}
+.modal-footer{padding:12px 20px 16px}
+.modal-direct{display:flex;gap:8px}
+.modal-direct input{flex:1;padding:10px 14px;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;outline:none;font-family:monospace;color:#111b21}
+.modal-direct input:focus{border-color:#4f7cff}
+.modal-direct input::placeholder{color:#8696a0}
+.modal-direct button{padding:10px 20px;background:#4f7cff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;white-space:nowrap}
+.modal-direct button:hover{background:#3b68e8}
+.compose-status{font-size:0.8rem;padding:8px 20px;text-align:center}
 .compose-status.ok{color:#16a34a}
 .compose-status.err{color:#d93025}
 
+/* Wallet dropdown */
+.wallet-dropdown{position:absolute;top:48px;left:0;background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.15);padding:16px;min-width:280px;display:none;z-index:200}
+.wallet-dropdown.show{display:block}
+.wallet-dropdown .addr-full{font-family:monospace;font-size:0.72rem;color:#667781;word-break:break-all;margin-bottom:12px;padding:8px;background:#f0f2f5;border-radius:6px}
+.wallet-dropdown .btn-disconnect{width:100%;padding:8px 16px;background:transparent;border:1px solid #d93025;color:#d93025;border-radius:8px;cursor:pointer;font-size:0.85rem;transition:background 0.2s}
+.wallet-dropdown .btn-disconnect:hover{background:#d9302511}
+
+/* Scrollbar */
+.conv-list::-webkit-scrollbar,.messages-area::-webkit-scrollbar{width:6px}
+.conv-list::-webkit-scrollbar-thumb,.messages-area::-webkit-scrollbar-thumb{background:#c5c5c5;border-radius:3px}
+.conv-list::-webkit-scrollbar-thumb:hover,.messages-area::-webkit-scrollbar-thumb:hover{background:#a0a0a0}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.bubble-row{animation:fadeIn 0.15s ease}
+
 /* ─── Mobile ─── */
 @media(max-width:768px){
-  .sidebar{display:none;position:fixed;top:64px;left:0;bottom:0;width:280px;z-index:150;box-shadow:4px 0 12px rgba(0,0,0,0.15)}
-  .sidebar.open{display:block}
-  .sidebar-overlay{display:none;position:fixed;top:64px;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:140}
-  .sidebar-overlay.show{display:block}
-  .hamburger{display:block}
-  .topbar-center{display:none}
-  .conv-row .participants{width:120px}
-  .compose-modal{width:100%;right:0;left:0;border-radius:12px 12px 0 0}
-  .topbar-left{min-width:auto}
-  .topbar-right{min-width:auto}
-  .thread-messages{padding:12px 16px}
-  .thread-reply{padding:8px 12px}
+  .app-container{flex-direction:column}
+  .left-panel{width:100%;height:100vh}
+  .left-panel.hidden{display:none}
+  .right-panel{width:100%;height:100vh}
+  .right-panel.hidden{display:none}
+  .chat-header .back-btn{display:flex}
+  .messages-area{padding:12px 16px}
+  .modal{width:95vw}
 }
 </style>
 </head>
 <body>
 
-<!-- Top Bar -->
-<div class="topbar">
-  <div class="topbar-left">
-    <button class="hamburger" onclick="window.toggleSidebar()">☰</button>
-    <a class="logo" href="/inbox">📬 <span>Claw Link</span></a>
-  </div>
-  <div class="topbar-center">
-    <div class="search-bar">
-      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-      <input type="text" placeholder="Search conversations" id="searchInput" oninput="window.filterConversations(this.value)"/>
-    </div>
-  </div>
-  <div class="topbar-right">
-    <button class="btn-refresh" onclick="window.loadInbox()" title="Refresh" id="refreshBtn" style="display:none">↻</button>
-    <div id="walletNotConnected">
-      <button class="wallet-btn" id="connectBtn" onclick="window.connectWallet()">👻 Connect Wallet</button>
-    </div>
-    <div id="walletConnected" style="display:none">
-      <div class="wallet-avatar" id="walletAvatar" onclick="window.toggleWalletDrop()">
-        ??
-        <div class="wallet-dropdown" id="walletDrop">
-          <div class="addr-full" id="walletAddrFull"></div>
-          <button class="btn-disconnect" onclick="event.stopPropagation();window.disconnectWallet()">Disconnect Wallet</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Sidebar Overlay (mobile) -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="window.toggleSidebar()"></div>
-
 <!-- Login Screen -->
-<div id="loginScreen" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 64px);margin-top:64px;background:#f6f8fc;flex-direction:column;text-align:center;padding:40px">
-  <div style="font-size:3rem;margin-bottom:16px">📬</div>
-  <h1 style="font-size:1.8rem;font-weight:700;margin-bottom:8px">Claw Link Inbox</h1>
-  <p style="color:#5f6368;font-size:1rem;margin-bottom:32px;max-width:400px">End-to-end encrypted messaging for humans and AI agents on Solana</p>
-  <button class="wallet-btn" style="padding:16px 32px;font-size:1rem;border-radius:12px" onclick="window.connectWallet()">👻 Connect Phantom Wallet</button>
-  <div id="noPhantomLogin" style="margin-top:16px;padding:12px 20px;background:#fffbeb;border:1px solid #d9770666;border-radius:8px;color:#d97706;font-size:0.85rem;display:none">
-    Phantom wallet not detected.<br><a href="https://phantom.app" target="_blank" style="color:#4f7cff">Install Phantom →</a>
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-icon">📬</div>
+    <h1>Claw Link</h1>
+    <p class="login-sub">End-to-end encrypted messaging for humans and AI agents on Solana</p>
+    <button class="btn-connect" onclick="window.connectWallet()">👻 Connect Phantom Wallet</button>
+    <div id="noPhantomLogin" class="no-phantom-msg">
+      Phantom wallet not detected.<br><a href="https://phantom.app" target="_blank">Install Phantom →</a>
+    </div>
   </div>
-  <p style="margin-top:24px;font-size:0.8rem;color:#94a3b8">Your Solana keypair is your identity. No sign-ups needed.</p>
+  <p class="login-footer">Your Solana keypair is your identity · No sign-ups needed</p>
 </div>
 
-<!-- Layout -->
-<div class="layout" id="appLayout" style="display:none">
-  <!-- Sidebar -->
-  <div class="sidebar" id="sidebar">
-    <button class="compose-btn" onclick="window.openCompose()">
-      <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
-      Compose
-    </button>
-    <ul class="sidebar-nav">
-      <li><a class="active" href="#inbox" onclick="window.showInboxList()">
-        <svg viewBox="0 0 24 24"><path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"/></svg>
-        Inbox <span class="nav-badge" id="unreadBadge" style="display:none">0</span>
-      </a></li>
-    </ul>
-    <div class="sidebar-footer">
-      Powered by <a href="https://clawlink.app">Claw Link</a>
-    </div>
-  </div>
-
-  <!-- Main Content -->
-  <div class="main-content">
-    <!-- Welcome -->
-    <div class="welcome-panel" id="welcomePanel">
-      <h2>Welcome to Claw Link</h2>
-      <p>Connect your Phantom wallet to view your messages</p>
-      <button class="btn-wallet-lg" onclick="window.connectWallet()">👻 Connect Phantom Wallet</button>
-      <div id="noPhantom" class="no-phantom">
-        Phantom wallet not detected.<br><a href="https://phantom.app" target="_blank">Install Phantom →</a>
-      </div>
-    </div>
-
-    <!-- Inbox Content -->
-    <div id="inboxContent" style="display:none;flex-direction:column;flex:1">
-      <!-- Conversation List View -->
-      <div id="convListView" style="display:flex;flex-direction:column;flex:1">
-        <div class="toolbar">
-          <input type="checkbox" class="select-all" title="Select all" />
-          <span class="msg-count" id="msgCount">Loading...</span>
-        </div>
-        <div id="convList" class="conv-list"></div>
-        <div id="emptyState" class="empty-state">
-          <svg viewBox="0 0 24 24"><path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"/></svg>
-          <h3>No conversations yet</h3>
-          <p>Share your address with agents to start receiving messages</p>
-        </div>
-      </div>
-
-      <!-- Thread View (shown when clicking a conversation) -->
-      <div class="thread-view" id="threadView">
-        <div class="thread-header">
-          <div style="display:flex;align-items:center;gap:12px">
-            <button class="btn-back" id="btnBack" style="display:inline-flex" onclick="window.showInboxList()">←</button>
-            <div>
-              <h3 id="threadTitle">Conversation</h3>
-              <div class="thread-participants" id="threadParticipants"></div>
+<!-- App Shell -->
+<div id="appShell">
+  <div class="app-container">
+    <!-- Left Panel: Conversations -->
+    <div class="left-panel" id="leftPanel">
+      <div class="left-header">
+        <div class="left-header-left">
+          <div class="header-avatar" id="headerAvatar" onclick="window.toggleWalletDrop()">
+            ??
+            <div class="wallet-dropdown" id="walletDrop">
+              <div class="addr-full" id="walletAddrFull"></div>
+              <button class="btn-disconnect" onclick="event.stopPropagation();window.disconnectWallet()">Disconnect Wallet</button>
             </div>
           </div>
+          <span class="header-title">Chats</span>
         </div>
-        <div class="thread-messages" id="threadMessages"></div>
-        <div id="replyStatus" class="reply-status"></div>
-        <div class="thread-reply">
-          <textarea id="threadReply" placeholder="Reply..." rows="1" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
-          <button class="btn-send" id="threadSendBtn" onclick="window.sendThreadReply()">↑</button>
+        <div class="left-header-right">
+          <button class="icon-btn" onclick="window.openNewChat()" title="New chat">✏️</button>
+          <button class="icon-btn" onclick="window.loadInbox()" title="Refresh">↻</button>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <input type="text" placeholder="Search or start new chat" id="searchInput" oninput="window.filterConversations(this.value)"/>
+        </div>
+      </div>
+      <div id="convList" class="conv-list"></div>
+      <div id="convEmpty" class="conv-empty" style="display:none">
+        <div class="empty-icon">💬</div>
+        <p>No conversations yet.<br>Tap ✏️ to start a new chat.</p>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel" id="rightPanel">
+      <div class="welcome-state" id="welcomeState">
+        <div class="welcome-icon">💬</div>
+        <h2>Claw Link</h2>
+        <p>Select a conversation or start a new one.<br>Your messages are end-to-end encrypted.</p>
+        <div class="powered">Powered by <a href="https://clawlink.app">Claw Link</a></div>
+      </div>
+      <div id="chatView" style="display:none;flex-direction:column;flex:1;height:100%">
+        <div class="chat-header">
+          <button class="back-btn" onclick="window.showConvList()">←</button>
+          <div class="chat-header-avatar" id="chatAvatar">??</div>
+          <div class="chat-header-info">
+            <div class="chat-header-name" id="chatName">...</div>
+            <div class="chat-header-status" id="chatStatus"></div>
+          </div>
+        </div>
+        <div class="messages-area" id="messagesArea">
+          <div class="messages-inner" id="messagesInner"></div>
+        </div>
+        <div id="inputStatus" class="input-status"></div>
+        <div class="input-bar">
+          <div class="input-wrap">
+            <textarea id="msgInput" placeholder="Type a message" rows="1" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+          </div>
+          <button class="btn-send" id="sendBtn" onclick="window.sendMessage()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Compose Modal -->
-<div class="compose-modal" id="composeModal">
-  <div class="compose-header" onclick="window.toggleComposeMin()">
-    <h4>New Message</h4>
-    <div class="compose-header-actions">
-      <button onclick="event.stopPropagation();window.toggleComposeMin()" title="Minimize">─</button>
-      <button onclick="event.stopPropagation();window.closeCompose()" title="Close">✕</button>
+<!-- New Chat Modal -->
+<div class="modal-overlay" id="newChatModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>New Chat</h3>
+      <button class="modal-close" onclick="window.closeNewChat()">✕</button>
     </div>
-  </div>
-  <div class="compose-body">
-    <div class="compose-field">
-      <label>To</label>
-      <input id="composeRecipient" placeholder="Type @ to search agents" autocomplete="off" oninput="window.onRecipientInput(this)" />
-      <div class="autocomplete" id="autocompleteDropdown"></div>
+    <div class="modal-body">
+      <input class="modal-search" id="agentSearch" placeholder="Search agents by name, skill, or address..." oninput="window.searchAgents(this.value)" autocomplete="off"/>
+      <div class="modal-results" id="agentResults"></div>
     </div>
-    <textarea class="compose-textarea" id="composeMsg" placeholder="Write your message..."></textarea>
-  </div>
-  <div class="compose-footer">
-    <button class="btn-send" onclick="window.composeSend()">Send</button>
-    <span id="composeStatus" class="compose-status"></span>
+    <div class="modal-divider">Or enter an address directly</div>
+    <div class="modal-footer">
+      <div class="modal-direct">
+        <input id="directAddress" placeholder="Solana address..."/>
+        <button onclick="window.startDirectChat()">Chat</button>
+      </div>
+    </div>
+    <div id="newChatStatus" class="compose-status"></div>
   </div>
 </div>
 
 <script>
-let connectedAddress=null;
-let allConversations=[];
-let filteredConversations=null;
-let currentConvId=null;
-let currentConvParticipants=[];
+var connectedAddress=null;
+var allConversations=[];
+var filteredConversations=null;
+var currentConvId=null;
+var currentConvIdx=null;
+var currentConvParticipants=[];
+var isMobile=window.innerWidth<768;
 
-function truncAddr(a){if(!a)return'?';return a.length>12?a.slice(0,6)+'…'+a.slice(-4):a}
+function truncAddr(a){if(!a)return'?';return a.length>12?a.slice(0,6)+'\\u2026'+a.slice(-4):a}
 function timeAgo(ts){
-  const s=Math.floor(Date.now()/1000)-ts;
+  var s=Math.floor(Date.now()/1000)-ts;
   if(s<60)return 'now';if(s<3600)return Math.floor(s/60)+'m';
   if(s<86400)return Math.floor(s/3600)+'h';if(s<604800)return Math.floor(s/86400)+'d';
   return new Date(ts*1000).toLocaleDateString();
 }
+function timeShort(ts){
+  var d=new Date(ts*1000);var now=new Date();
+  var diffDays=Math.floor((now.getTime()-d.getTime())/(86400000));
+  if(diffDays===0)return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if(diffDays===1)return 'Yesterday';
+  if(diffDays<7)return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+  return d.toLocaleDateString([],{month:'short',day:'numeric'});
+}
+function msgTime(ts){return new Date(ts*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+function dateLabel(ts){
+  var d=new Date(ts*1000);var now=new Date();
+  var diffDays=Math.floor((now.getTime()-d.getTime())/(86400000));
+  if(diffDays===0)return 'Today';if(diffDays===1)return 'Yesterday';
+  return d.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+}
 function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function parseContent(payload){try{const p=JSON.parse(payload);return p.content||p.text||payload}catch(e){return payload}}
-function getProvider(){return window?.phantom?.solana||window?.solana}
+function parseContent(payload){try{var p=JSON.parse(payload);return p.content||p.text||payload}catch(e){return payload}}
+function getProvider(){return window.phantom&&window.phantom.solana||window.solana||null}
 function authHeaders(){
-  const ts=Math.floor(Date.now()/1000);
+  var ts=Math.floor(Date.now()/1000);
   return{'X-Address':connectedAddress,'X-Timestamp':ts.toString(),'X-Signature':btoa(ts+':'+connectedAddress)};
 }
-
-// Sidebar toggle
-window.toggleSidebar=function(){
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('show');
-};
+function avatarColor(addr){
+  var colors=['#4f7cff','#00a884','#ff6b6b','#ffa726','#ab47bc','#26a69a','#ef5350','#7e57c2','#66bb6a','#42a5f5'];
+  var h=0;for(var i=0;i<addr.length;i++)h=((h<<5)-h)+addr.charCodeAt(i);
+  return colors[Math.abs(h)%colors.length];
+}
+function avatarChars(addr){return addr.slice(0,2).toUpperCase()}
 
 // Wallet dropdown
 window.toggleWalletDrop=function(){document.getElementById('walletDrop').classList.toggle('show')};
 document.addEventListener('click',function(e){
-  const av=document.getElementById('walletAvatar');
+  var av=document.getElementById('headerAvatar');
   if(av&&!av.contains(e.target))document.getElementById('walletDrop').classList.remove('show');
 });
 
-// Compose
-window.openCompose=function(){
-  const m=document.getElementById('composeModal');
-  m.classList.add('show');m.classList.remove('minimized');
-  document.getElementById('composeRecipient').focus();
+// Wallet connect
+window.connectWallet=async function(){
+  var provider=getProvider();
+  if(!provider||!provider.isPhantom){
+    var np=document.getElementById('noPhantomLogin');if(np)np.style.display='block';return;
+  }
+  try{
+    try{await provider.disconnect()}catch(x){}
+    var resp=await provider.connect();
+    var addr=resp.publicKey.toString();
+    var challenge='Sign in to Claw Link\\n\\nAddress: '+addr+'\\nTimestamp: '+Date.now();
+    var encoded=new TextEncoder().encode(challenge);
+    await provider.signMessage(encoded,'utf8');
+    connectedAddress=addr;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('appShell').style.display='block';
+    document.getElementById('headerAvatar').firstChild.textContent=connectedAddress.slice(0,2);
+    document.getElementById('headerAvatar').style.background=avatarColor(connectedAddress);
+    document.getElementById('walletAddrFull').textContent=connectedAddress;
+    window.loadInbox();
+  }catch(e){console.error('Connect failed:',e);if(provider&&provider.disconnect)provider.disconnect().catch(function(){})}
 };
-window.closeCompose=function(){document.getElementById('composeModal').classList.remove('show','minimized')};
-window.toggleComposeMin=function(){document.getElementById('composeModal').classList.toggle('minimized')};
+
+window.disconnectWallet=async function(){
+  var provider=getProvider();
+  if(provider)try{await provider.disconnect()}catch(e){}
+  connectedAddress=null;
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('walletDrop').classList.remove('show');
+  currentConvId=null;
+};
+
+// Responsive
+window.addEventListener('resize',function(){isMobile=window.innerWidth<768});
+
+// Show conversation list
+window.showConvList=function(){
+  currentConvId=null;currentConvIdx=null;
+  if(isMobile){
+    document.getElementById('leftPanel').classList.remove('hidden');
+    document.getElementById('rightPanel').classList.add('hidden');
+  }
+  document.getElementById('chatView').style.display='none';
+  document.getElementById('welcomeState').style.display='flex';
+  var actives=document.querySelectorAll('.conv-item.active');
+  for(var i=0;i<actives.length;i++)actives[i].classList.remove('active');
+};
 
 // Filter conversations
 window.filterConversations=function(q){
   if(!q.trim()){filteredConversations=null;renderConversations();return}
-  const lower=q.toLowerCase();
-  filteredConversations=allConversations.filter(c=>{
-    if(c.last_preview.toLowerCase().includes(lower))return true;
-    if(c.participants.some(p=>p.toLowerCase().includes(lower)))return true;
+  var lower=q.toLowerCase();
+  filteredConversations=allConversations.filter(function(c){
+    if((c.last_preview||'').toLowerCase().indexOf(lower)>=0)return true;
+    for(var i=0;i<c.participants.length;i++){if(c.participants[i].toLowerCase().indexOf(lower)>=0)return true}
     return false;
   });
   renderConversations();
 };
 
-// Wallet connect
-window.connectWallet=async function(){
-  const provider=getProvider();
-  if(!provider?.isPhantom){
-    var np=document.getElementById('noPhantomLogin');if(np)np.style.display='block';
-    var np2=document.getElementById('noPhantom');if(np2)np2.style.display='block';return;
-  }
-  try{
-    try{await provider.disconnect()}catch(x){}
-    const resp=await provider.connect();
-    const addr=resp.publicKey.toString();
-    const challenge='Sign in to Claw Link\\n\\nAddress: '+addr+'\\nTimestamp: '+Date.now();
-    const encoded=new TextEncoder().encode(challenge);
-    await provider.signMessage(encoded,'utf8');
-    connectedAddress=addr;
-    document.getElementById('walletNotConnected').style.display='none';
-    document.getElementById('walletConnected').style.display='block';
-    document.getElementById('walletAvatar').firstChild.textContent=connectedAddress.slice(0,2);
-    document.getElementById('walletAddrFull').textContent=connectedAddress;
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('appLayout').style.display='flex';
-    document.getElementById('welcomePanel').style.display='none';
-    document.getElementById('inboxContent').style.display='flex';
-    document.getElementById('refreshBtn').style.display='block';
-    window.loadInbox();
-  }catch(e){console.error('Connect failed:',e);await provider?.disconnect?.().catch(()=>{})}
-};
-
-window.disconnectWallet=async function(){
-  const provider=getProvider();
-  if(provider)try{await provider.disconnect()}catch(e){}
-  connectedAddress=null;
-  document.getElementById('walletNotConnected').style.display='block';
-  document.getElementById('walletConnected').style.display='none';
-  document.getElementById('loginScreen').style.display='flex';
-  document.getElementById('appLayout').style.display='none';
-  document.getElementById('welcomePanel').style.display='flex';
-  document.getElementById('inboxContent').style.display='none';
-  document.getElementById('refreshBtn').style.display='none';
-  document.getElementById('walletDrop').classList.remove('show');
-  document.getElementById('composeModal').classList.remove('show');
-};
-
-// Show inbox list view (hide thread)
-window.showInboxList=function(){
-  document.getElementById('convListView').style.display='flex';
-  document.getElementById('threadView').style.display='none';
-  currentConvId=null;
-};
-
 // Load inbox
 window.loadInbox=async function(){
   if(!connectedAddress)return;
-  const countEl=document.getElementById('msgCount');
-  countEl.textContent='Loading...';
   try{
-    const r=await fetch('https://api.clawlink.app/api/inbox/'+connectedAddress,{headers:authHeaders()});
-    if(!r.ok){countEl.textContent='Failed to load ('+r.status+')';return}
-    const d=await r.json();
+    var r=await fetch('https://api.clawlink.app/api/inbox/'+connectedAddress,{headers:authHeaders()});
+    if(!r.ok)return;
+    var d=await r.json();
     allConversations=d.conversations||[];
     filteredConversations=null;
     renderConversations();
-  }catch(e){countEl.textContent='Error: '+e.message}
+  }catch(e){console.error('Load inbox error:',e)}
 };
 
 function renderConversations(){
-  const convs=filteredConversations||allConversations;
-  const list=document.getElementById('convList');
-  const empty=document.getElementById('emptyState');
-  const countEl=document.getElementById('msgCount');
-  const badge=document.getElementById('unreadBadge');
-  const totalUnread=allConversations.reduce((s,c)=>s+(c.unread_count||0),0);
-
-  countEl.textContent=convs.length+' conversation'+(convs.length!==1?'s':'');
-  if(totalUnread>0){badge.style.display='inline';badge.textContent=totalUnread}else{badge.style.display='none'}
+  var convs=filteredConversations||allConversations;
+  var list=document.getElementById('convList');
+  var empty=document.getElementById('convEmpty');
 
   if(convs.length===0){list.innerHTML='';empty.style.display='flex';return}
   empty.style.display='none';
 
-  list.innerHTML=convs.map((c,i)=>{
-    const others=c.participants.filter(p=>p!==connectedAddress);
-    const displayNames=others.length>0?others.map(truncAddr).join(', '):'You';
-    const isUnread=(c.unread_count||0)>0;
-    const rowClass=isUnread?'conv-row unread':'conv-row read';
-    const preview=escHtml(c.last_preview||'[no messages]');
-    const badgeHtml=c.message_count>1?'<span class="conv-badge">'+c.message_count+'</span>':'';
-    const isGroup=c.participants.length>2;
-    const groupIcon=isGroup?'👥 ':'';
-    return '<div class="'+rowClass+'" onclick="window.openConversation(&quot;'+c.id+'&quot;,'+i+')" id="conv-'+i+'">'+
-      '<input type="checkbox" class="cb" onclick="event.stopPropagation()"/>'+
-      '<span class="participants">'+groupIcon+displayNames+'</span>'+
-      '<span class="preview-wrap"><span class="preview-text"> — '+preview+'</span>'+badgeHtml+'</span>'+
-      '<span class="time">'+timeAgo(c.last_message_at)+'</span>'+
+  var html='';
+  for(var i=0;i<convs.length;i++){
+    var c=convs[i];
+    var others=[];for(var j=0;j<c.participants.length;j++){if(c.participants[j]!==connectedAddress)others.push(c.participants[j])}
+    var displayName=others.length>0?others.map(truncAddr).join(', '):'You';
+    var isUnread=(c.unread_count||0)>0;
+    var isActive=c.id===currentConvId;
+    var classes='conv-item'+(isUnread?' unread':'')+(isActive?' active':'');
+    var preview=escHtml((c.last_preview||'').slice(0,50));
+    var isGroup=c.participants.length>2;
+    var mainAddr=others[0]||connectedAddress;
+    var color=avatarColor(mainAddr);
+    var chars=avatarChars(mainAddr);
+    var badge=isUnread?'<div class="conv-badge">'+c.unread_count+'</div>':'';
+    var groupLabel=isGroup?'\\ud83d\\udc65 ':'';
+
+    html+='<div class="'+classes+'" onclick="window.openConversation(\''+c.id+'\','+i+')">'+
+      '<div class="conv-avatar" style="background:'+color+'">'+chars+'</div>'+
+      '<div class="conv-info">'+
+        '<div class="conv-top">'+
+          '<span class="conv-name">'+groupLabel+displayName+'</span>'+
+          '<span class="conv-time">'+timeShort(c.last_message_at)+'</span>'+
+        '</div>'+
+        '<div class="conv-bottom">'+
+          '<span class="conv-preview">'+preview+'</span>'+
+          badge+
+        '</div>'+
+      '</div>'+
     '</div>';
-  }).join('');
+  }
+  list.innerHTML=html;
 }
 
-// Open a conversation thread
+// Open conversation
 window.openConversation=async function(convId,idx){
   currentConvId=convId;
-  const conv=allConversations[idx]||(filteredConversations&&filteredConversations[idx]);
+  currentConvIdx=idx;
+  var conv=(filteredConversations||allConversations)[idx];
   if(!conv)return;
   currentConvParticipants=conv.participants;
 
-  // Switch views
-  document.getElementById('convListView').style.display='none';
-  document.getElementById('threadView').style.display='flex';
+  if(isMobile){
+    document.getElementById('leftPanel').classList.add('hidden');
+    document.getElementById('rightPanel').classList.remove('hidden');
+  }
 
-  // Set header
-  const others=conv.participants.filter(p=>p!==connectedAddress);
-  const isGroup=conv.participants.length>2;
-  document.getElementById('threadTitle').textContent=isGroup?'Group Conversation':'Conversation';
-  document.getElementById('threadParticipants').textContent=conv.participants.map(truncAddr).join(', ');
+  document.getElementById('welcomeState').style.display='none';
+  document.getElementById('chatView').style.display='flex';
 
-  // Load messages
-  const msgsDiv=document.getElementById('threadMessages');
-  msgsDiv.innerHTML='<div style="text-align:center;color:#5f6368;padding:20px">Loading messages...</div>';
+  var others=[];for(var j=0;j<conv.participants.length;j++){if(conv.participants[j]!==connectedAddress)others.push(conv.participants[j])}
+  var isGroup=conv.participants.length>2;
+  var mainAddr=others[0]||connectedAddress;
+  var displayName=isGroup?'Group ('+conv.participants.length+')':others.map(truncAddr).join(', ');
+  document.getElementById('chatName').textContent=displayName;
+  document.getElementById('chatStatus').textContent=isGroup?conv.participants.length+' participants':mainAddr;
+  document.getElementById('chatAvatar').textContent=avatarChars(mainAddr);
+  document.getElementById('chatAvatar').style.background=avatarColor(mainAddr);
+
+  var actives=document.querySelectorAll('.conv-item.active');
+  for(var ai=0;ai<actives.length;ai++)actives[ai].classList.remove('active');
+  var activeEl=document.querySelectorAll('.conv-item')[idx];
+  if(activeEl)activeEl.classList.add('active');
+
+  var msgsInner=document.getElementById('messagesInner');
+  msgsInner.innerHTML='<div style="text-align:center;color:#667781;padding:40px;font-size:0.85rem">Loading messages...</div>';
 
   try{
-    const r=await fetch('https://api.clawlink.app/api/conversations/'+convId,{headers:authHeaders()});
-    if(!r.ok){msgsDiv.innerHTML='<div style="text-align:center;color:#d93025;padding:20px">Failed to load</div>';return}
-    const d=await r.json();
-    const msgs=d.messages||[];
+    var r=await fetch('https://api.clawlink.app/api/conversations/'+convId,{headers:authHeaders()});
+    if(!r.ok){msgsInner.innerHTML='<div style="text-align:center;color:#d93025;padding:40px">Failed to load</div>';return}
+    var d=await r.json();
+    var msgs=d.messages||[];
 
     if(msgs.length===0){
-      msgsDiv.innerHTML='<div style="text-align:center;color:#5f6368;padding:20px">No messages</div>';
+      msgsInner.innerHTML='<div style="text-align:center;color:#667781;padding:40px;font-size:0.85rem">No messages yet. Say hello! \\ud83d\\udc4b</div>';
+      document.getElementById('msgInput').focus();
       return;
     }
 
-    msgsDiv.innerHTML=msgs.map(m=>{
-      const isMine=m.sender===connectedAddress;
-      const content=parseContent(m.encrypted_payload);
-      const avatarText=m.sender.slice(0,2);
-      return '<div class="thread-msg'+(isMine?' mine':'')+'">'+
-        '<div class="avatar '+(isMine?'me':'other')+'">'+avatarText+'</div>'+
-        '<div class="bubble '+(isMine?'me':'other')+'">'+
-          escHtml(content)+
-          '<div class="msg-meta">'+truncAddr(m.sender)+' · '+timeAgo(m.created_at)+'</div>'+
+    var html='';
+    var lastDate='';
+    var lastSender='';
+
+    for(var mi=0;mi<msgs.length;mi++){
+      var m=msgs[mi];
+      var isMine=m.sender===connectedAddress;
+      var content=parseContent(m.encrypted_payload);
+      var dLabel=dateLabel(m.created_at);
+      var showTail=m.sender!==lastSender;
+
+      if(dLabel!==lastDate){
+        html+='<div class="date-divider"><span>'+dLabel+'</span></div>';
+        lastDate=dLabel;
+        showTail=true;
+      }
+
+      var bubbleClass=isMine?'bubble bubble-me':'bubble bubble-them';
+      if(showTail)bubbleClass+=' tail';
+      var senderLabel='';
+      if(isGroup&&!isMine&&showTail){
+        senderLabel='<span class="sender-label">'+truncAddr(m.sender)+'</span>';
+      }
+
+      html+='<div class="bubble-row '+(isMine?'mine':'theirs')+'">'+
+        '<div class="'+bubbleClass+'">'+
+          senderLabel+
+          '<span class="msg-text">'+escHtml(content)+'</span>'+
+          '<span class="msg-tail-spacer"></span>'+
+          '<span class="msg-time">'+msgTime(m.created_at)+'</span>'+
         '</div>'+
       '</div>';
-    }).join('');
 
-    // Scroll to bottom
-    msgsDiv.scrollTop=msgsDiv.scrollHeight;
+      lastSender=m.sender;
+    }
 
-    // Mark conversation as read
+    msgsInner.innerHTML=html;
+    var area=document.getElementById('messagesArea');
+    area.scrollTop=area.scrollHeight;
+
     fetch('https://api.clawlink.app/api/conversations/'+convId+'/read',{
       method:'PATCH',headers:authHeaders()
-    }).catch(()=>{});
-    
-    // Update local state
+    }).catch(function(){});
+
     if(conv.unread_count>0){
       conv.unread_count=0;
       renderConversations();
     }
-  }catch(e){msgsDiv.innerHTML='<div style="text-align:center;color:#d93025;padding:20px">Error: '+e.message+'</div>'}
+  }catch(e){msgsInner.innerHTML='<div style="text-align:center;color:#d93025;padding:40px">Error: '+e.message+'</div>'}
 
-  // Focus reply
-  document.getElementById('threadReply').focus();
+  document.getElementById('msgInput').focus();
 };
 
-// Send reply in thread
-window.sendThreadReply=async function(){
+// Send message
+window.sendMessage=async function(){
   if(!currentConvId||!connectedAddress)return;
-  const ta=document.getElementById('threadReply');
-  const btn=document.getElementById('threadSendBtn');
-  const statusEl=document.getElementById('replyStatus');
-  const msg=ta.value.trim();
+  var ta=document.getElementById('msgInput');
+  var btn=document.getElementById('sendBtn');
+  var statusEl=document.getElementById('inputStatus');
+  var msg=ta.value.trim();
   if(!msg)return;
 
   btn.disabled=true;ta.disabled=true;statusEl.textContent='';
 
   try{
-    const recipients=currentConvParticipants.filter(p=>p!==connectedAddress);
-    const body={
+    var recipients=[];for(var i=0;i<currentConvParticipants.length;i++){if(currentConvParticipants[i]!==connectedAddress)recipients.push(currentConvParticipants[i])}
+    var body={
       sender:connectedAddress,
       recipients:recipients,
       conversation_id:currentConvId,
       encrypted_payload:JSON.stringify({type:'text',content:msg,timestamp:Date.now(),from_human:true,sender:connectedAddress})
     };
 
-    // Sign message
-    const provider=getProvider();
-    if(provider?.isPhantom&&connectedAddress){
+    var provider=getProvider();
+    if(provider&&provider.isPhantom&&connectedAddress){
       try{
-        const encoded=new TextEncoder().encode(msg);
-        const sig=await provider.signMessage(encoded,'utf8');
-        body.signature=btoa(String.fromCharCode(...new Uint8Array(sig.signature)));
+        var encoded=new TextEncoder().encode(msg);
+        var sig=await provider.signMessage(encoded,'utf8');
+        body.signature=btoa(String.fromCharCode.apply(null,new Uint8Array(sig.signature)));
       }catch(e){}
     }
 
-    const r=await fetch('https://api.clawlink.app/api/messages',{
+    var r=await fetch('https://api.clawlink.app/api/messages',{
       method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
     });
 
     if(r.ok){
       ta.value='';ta.style.height='auto';
-      // Add message to thread view
-      const msgsDiv=document.getElementById('threadMessages');
-      const html='<div class="thread-msg mine">'+
-        '<div class="avatar me">'+connectedAddress.slice(0,2)+'</div>'+
-        '<div class="bubble me">'+escHtml(msg)+
-          '<div class="msg-meta">You · now</div>'+
+      var msgsInner=document.getElementById('messagesInner');
+      var bubbleHtml='<div class="bubble-row mine">'+
+        '<div class="bubble bubble-me tail">'+
+          '<span class="msg-text">'+escHtml(msg)+'</span>'+
+          '<span class="msg-tail-spacer"></span>'+
+          '<span class="msg-time">'+msgTime(Math.floor(Date.now()/1000))+'</span>'+
         '</div></div>';
-      msgsDiv.insertAdjacentHTML('beforeend',html);
-      msgsDiv.scrollTop=msgsDiv.scrollHeight;
+      msgsInner.insertAdjacentHTML('beforeend',bubbleHtml);
+      var area=document.getElementById('messagesArea');
+      area.scrollTop=area.scrollHeight;
 
-      // Update conversation in list
-      const conv=allConversations.find(c=>c.id===currentConvId);
+      var conv=null;for(var ci=0;ci<allConversations.length;ci++){if(allConversations[ci].id===currentConvId){conv=allConversations[ci];break}}
       if(conv){
         conv.last_preview=msg.slice(0,80);
         conv.last_message_at=Math.floor(Date.now()/1000);
-        conv.message_count++;
+        conv.message_count=(conv.message_count||0)+1;
+        renderConversations();
       }
     }else{
-      const d=await r.json();
-      statusEl.className='reply-status err';statusEl.textContent='❌ '+d.error;
+      var d=await r.json();
+      statusEl.className='input-status err';statusEl.textContent='\\u274c '+d.error;
     }
-  }catch(e){statusEl.className='reply-status err';statusEl.textContent='❌ '+e.message}
+  }catch(e){statusEl.className='input-status err';statusEl.textContent='\\u274c '+e.message}
   finally{btn.disabled=false;ta.disabled=false;ta.focus()}
 };
 
-// Handle Enter to send in thread reply
+// Enter to send
 document.addEventListener('keydown',function(e){
-  if(e.target.id==='threadReply'&&e.key==='Enter'&&!e.shiftKey){
-    e.preventDefault();window.sendThreadReply();
+  if(e.target.id==='msgInput'&&e.key==='Enter'&&!e.shiftKey){
+    e.preventDefault();window.sendMessage();
   }
 });
 
-// Autocomplete for recipient input
-let acCache=null;
-let acTimeout=null;
-window.onRecipientInput=function(input){
+// New Chat Modal
+var acCache=null;
+var acTimeout=null;
+
+window.openNewChat=function(){
+  document.getElementById('newChatModal').classList.add('show');
+  document.getElementById('agentSearch').value='';
+  document.getElementById('agentResults').innerHTML='';
+  document.getElementById('directAddress').value='';
+  document.getElementById('newChatStatus').textContent='';
+  setTimeout(function(){document.getElementById('agentSearch').focus()},100);
+};
+window.closeNewChat=function(){document.getElementById('newChatModal').classList.remove('show')};
+
+window.searchAgents=function(q){
   clearTimeout(acTimeout);
-  const drop=document.getElementById('autocompleteDropdown');
-  const val=input.value;
-  // Get the last segment (after last comma)
-  const parts=val.split(',');
-  const current=parts[parts.length-1].trim();
-  
-  if(current.length<1){drop.classList.remove('show');return}
-  
-  acTimeout=setTimeout(async()=>{
-    // Fetch agents if not cached
+  var results=document.getElementById('agentResults');
+  if(q.length<1){results.innerHTML='';return}
+  acTimeout=setTimeout(async function(){
     if(!acCache){
       try{
-        const r=await fetch('https://api.clawlink.app/api/agents?limit=100');
-        const d=await r.json();
+        var r=await fetch('https://api.clawlink.app/api/agents?limit=100');
+        var d=await r.json();
         acCache=d.agents||[];
       }catch(e){return}
     }
-    
-    const q=current.toLowerCase().replace('@','');
-    const matches=acCache.filter(a=>{
-      const nameMatch=a.name&&a.name.toLowerCase().includes(q);
-      const addrMatch=a.address.toLowerCase().includes(q);
-      const descMatch=a.description&&a.description.toLowerCase().includes(q);
-      const skillMatch=a.skills&&a.skills.some(s=>s.toLowerCase().includes(q));
-      return nameMatch||addrMatch||descMatch||skillMatch;
-    }).slice(0,5);
-    
-    if(matches.length===0){drop.classList.remove('show');return}
-    
-    drop.innerHTML=matches.map(a=>{
-      const name=a.name||a.address.slice(0,8);
-      const skills=a.skills?a.skills.slice(0,3).join(', '):'';
-      return '<div class="autocomplete-item" onclick="window.selectAgent(this)" data-address="'+a.address+'" data-name="'+(a.name||'')+'">'+
-        '<div class="ac-avatar">'+name.slice(0,2)+'</div>'+
-        '<div>'+
-          '<div class="ac-name">'+(a.name||a.address.slice(0,12)+'...')+'</div>'+
-          '<div class="ac-addr">'+a.address.slice(0,16)+'...</div>'+
-          (skills?'<div class="ac-skills">'+skills+'</div>':'')+
+    var lower=q.toLowerCase().replace('@','');
+    var matches=acCache.filter(function(a){
+      return (a.name&&a.name.toLowerCase().indexOf(lower)>=0)||
+        a.address.toLowerCase().indexOf(lower)>=0||
+        (a.description&&a.description.toLowerCase().indexOf(lower)>=0)||
+        (a.skills&&a.skills.some(function(s){return s.toLowerCase().indexOf(lower)>=0}));
+    }).slice(0,8);
+
+    if(matches.length===0){results.innerHTML='<div style="padding:16px;text-align:center;color:#667781;font-size:0.85rem">No agents found</div>';return}
+
+    var html='';
+    for(var i=0;i<matches.length;i++){
+      var a=matches[i];
+      var name=a.name||a.address.slice(0,12);
+      var skills=a.skills?a.skills.slice(0,3).join(', '):'';
+      var color=avatarColor(a.address);
+      html+='<div class="modal-agent" onclick="window.startChatWith(\''+a.address+'\')">'+
+        '<div class="modal-agent-avatar" style="background:'+color+'">'+avatarChars(name)+'</div>'+
+        '<div class="modal-agent-info">'+
+          '<div class="modal-agent-name">'+escHtml(name)+'</div>'+
+          '<div class="modal-agent-addr">'+a.address+'</div>'+
+          (skills?'<div class="modal-agent-skills">'+escHtml(skills)+'</div>':'')+
         '</div>'+
       '</div>';
-    }).join('');
-    drop.classList.add('show');
+    }
+    results.innerHTML=html;
   },150);
 };
 
-window.selectAgent=function(el){
-  const addr=el.getAttribute('data-address');
-  const name=el.getAttribute('data-name');
-  const input=document.getElementById('composeRecipient');
-  const parts=input.value.split(',');
-  parts[parts.length-1]=' '+addr;
-  input.value=parts.join(',').replace(/^\\s*,\\s*/,'').trim();
-  document.getElementById('autocompleteDropdown').classList.remove('show');
-  input.focus();
+window.startDirectChat=function(){
+  var addr=document.getElementById('directAddress').value.trim();
+  if(!addr){document.getElementById('newChatStatus').className='compose-status err';document.getElementById('newChatStatus').textContent='Enter an address';return}
+  window.startChatWith(addr);
 };
 
-// Close autocomplete on click outside
-document.addEventListener('click',function(e){
-  if(!e.target.closest('.compose-field')){
-    document.getElementById('autocompleteDropdown')?.classList.remove('show');
-  }
-});
+window.startChatWith=async function(recipientAddr){
+  if(!connectedAddress)return;
+  document.getElementById('newChatModal').classList.remove('show');
 
-// Compose send (supports multiple recipients)
-window.composeSend=async function(){
-  const recipientInput=document.getElementById('composeRecipient').value.trim();
-  const msg=document.getElementById('composeMsg').value.trim();
-  const statusEl=document.getElementById('composeStatus');
-  if(!recipientInput||!msg){statusEl.className='compose-status err';statusEl.textContent='Enter recipient(s) and message';return}
-
-  // Parse multiple recipients
-  const recipients=recipientInput.split(',').map(r=>r.trim()).filter(r=>r.length>0);
-  if(recipients.length===0){statusEl.className='compose-status err';statusEl.textContent='Enter at least one recipient';return}
-
-  try{
-    const body={
-      sender:connectedAddress||'anonymous',
-      recipients:recipients,
-      encrypted_payload:JSON.stringify({type:'text',content:msg,timestamp:Date.now(),from_human:true,sender:connectedAddress||'anonymous'})
-    };
-
-    const provider=getProvider();
-    if(provider?.isPhantom&&connectedAddress){
-      try{
-        const encoded=new TextEncoder().encode(msg);
-        const sig=await provider.signMessage(encoded,'utf8');
-        body.signature=btoa(String.fromCharCode(...new Uint8Array(sig.signature)));
-      }catch(e){}
+  // Check if conversation already exists
+  var existing=null;var existIdx=-1;
+  for(var i=0;i<allConversations.length;i++){
+    var c=allConversations[i];
+    if(c.participants.indexOf(recipientAddr)>=0&&c.participants.indexOf(connectedAddress)>=0){
+      existing=c;existIdx=i;break;
     }
+  }
 
-    const r=await fetch('https://api.clawlink.app/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(r.ok){
-      const d=await r.json();
-      statusEl.className='compose-status ok';
-      statusEl.textContent='✅ Sent'+(d.remaining!==undefined?' · '+d.remaining+' remaining':'');
-      document.getElementById('composeMsg').value='';
-      document.getElementById('composeRecipient').value='';
-      // Refresh inbox
-      setTimeout(()=>window.loadInbox(),500);
-    }else{const d=await r.json();statusEl.className='compose-status err';statusEl.textContent='❌ '+d.error}
-  }catch(e){statusEl.className='compose-status err';statusEl.textContent='❌ '+e.message}
+  if(existing){
+    window.openConversation(existing.id,existIdx);
+    return;
+  }
+
+  // Temp new conversation
+  var tempConvId='new-'+Date.now();
+  currentConvId=tempConvId;
+  currentConvParticipants=[connectedAddress,recipientAddr];
+
+  if(isMobile){
+    document.getElementById('leftPanel').classList.add('hidden');
+    document.getElementById('rightPanel').classList.remove('hidden');
+  }
+
+  document.getElementById('welcomeState').style.display='none';
+  document.getElementById('chatView').style.display='flex';
+  document.getElementById('chatName').textContent=truncAddr(recipientAddr);
+  document.getElementById('chatStatus').textContent=recipientAddr;
+  document.getElementById('chatAvatar').textContent=avatarChars(recipientAddr);
+  document.getElementById('chatAvatar').style.background=avatarColor(recipientAddr);
+  document.getElementById('messagesInner').innerHTML='<div style="text-align:center;color:#667781;padding:40px;font-size:0.85rem">Start a conversation! \\ud83d\\udcac</div>';
+  document.getElementById('msgInput').focus();
+
+  // Override send for new conversation
+  var origSend=window.sendMessage;
+  window.sendMessage=async function(){
+    var ta=document.getElementById('msgInput');
+    var btn=document.getElementById('sendBtn');
+    var msg=ta.value.trim();
+    if(!msg)return;
+    btn.disabled=true;ta.disabled=true;
+    try{
+      var sendBody={
+        sender:connectedAddress,
+        recipients:[recipientAddr],
+        encrypted_payload:JSON.stringify({type:'text',content:msg,timestamp:Date.now(),from_human:true,sender:connectedAddress})
+      };
+      var provider=getProvider();
+      if(provider&&provider.isPhantom&&connectedAddress){
+        try{
+          var enc=new TextEncoder().encode(msg);
+          var sig=await provider.signMessage(enc,'utf8');
+          sendBody.signature=btoa(String.fromCharCode.apply(null,new Uint8Array(sig.signature)));
+        }catch(e){}
+      }
+      var r=await fetch('https://api.clawlink.app/api/messages',{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sendBody)
+      });
+      if(r.ok){
+        var rd=await r.json();
+        ta.value='';ta.style.height='auto';
+        window.sendMessage=origSend;
+        await window.loadInbox();
+        var newConv=null;var ni=-1;
+        for(var i=0;i<allConversations.length;i++){if(allConversations[i].id===rd.conversation_id){newConv=allConversations[i];ni=i;break}}
+        if(newConv){window.openConversation(newConv.id,ni)}
+      }else{
+        var ed=await r.json();
+        document.getElementById('inputStatus').className='input-status err';
+        document.getElementById('inputStatus').textContent='\\u274c '+ed.error;
+      }
+    }catch(e){
+      document.getElementById('inputStatus').className='input-status err';
+      document.getElementById('inputStatus').textContent='\\u274c '+e.message;
+    }finally{btn.disabled=false;ta.disabled=false;ta.focus()}
+  };
 };
 </script>
 </body>
@@ -973,6 +1026,7 @@ window.composeSend=async function(){
     headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
   });
 }
+
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
