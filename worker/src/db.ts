@@ -27,12 +27,23 @@ export async function getAgent(env: Env, address: string): Promise<Agent | null>
 export async function upsertAgent(env: Env, agent: Agent): Promise<void> {
   await env.AGENTS.put(`agent:${agent.address}`, JSON.stringify(agent));
   
+  // Store name→address mapping for subdomain routing
+  if (agent.name) {
+    await env.AGENTS.put(`name:${agent.name.toLowerCase()}`, agent.address);
+  }
+  
   // Update index
   const index = await getAgentIndex(env);
   if (!index.includes(agent.address)) {
     index.push(agent.address);
     await env.AGENTS.put(AGENT_INDEX_KEY, JSON.stringify(index));
   }
+}
+
+export async function getAgentByName(env: Env, name: string): Promise<Agent | null> {
+  const address = await env.AGENTS.get(`name:${name.toLowerCase()}`);
+  if (!address) return null;
+  return getAgent(env, address);
 }
 
 export async function searchAgents(env: Env, query: string): Promise<Agent[]> {

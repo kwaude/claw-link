@@ -6,6 +6,7 @@ export interface Env {
 
 export interface Agent {
   address: string;
+  name?: string;          // subdomain name (e.g. "kwaude" → kwaude.clawlink.app)
   endpoint?: string;
   encryption_key?: string;
   registered_at: number;
