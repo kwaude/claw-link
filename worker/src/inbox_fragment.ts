@@ -1,277 +1,12 @@
-import { Env, Agent, Message } from './types';
-import { listAgents, getAgent, getAgentByName, upsertAgent, searchAgents, createMessage, getInbox, getInboxConversations, getConversation, getConversationMessages, markRead, markConversationRead, deleteMessage, getMessage, checkRateLimit } from './db';
-import { verifyAuth } from './auth';
-
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Address, X-Timestamp, X-Signature',
-};
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders },
-  });
-}
-
-function error(message: string, status = 400): Response {
-  return json({ error: message }, status);
-}
-
-// Route matcher
-function match(method: string, pattern: string, req: Request): Record<string, string> | null {
-  if (req.method !== method && method !== '*') return null;
-  
-  const url = new URL(req.url);
-  const path = url.pathname;
-  
-  const paramNames: string[] = [];
-  const regexStr = pattern.replace(/:(\w+)/g, (_, name) => {
-    paramNames.push(name);
-    return '([^/]+)';
-  });
-  
-  const regex = new RegExp(`^${regexStr}$`);
-  const m = path.match(regex);
-  if (!m) return null;
-  
-  const params: Record<string, string> = {};
-  paramNames.forEach((name, i) => {
-    params[name] = m[i + 1];
-  });
-  
-  return params;
-}
-
-// Agent subdomain profile HTML
-function agentProfilePage(agent: Agent): Response {
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${agent.description || agent.address.slice(0, 12)} — Claw Link</title>
-<meta name="description" content="${agent.description || 'Agent on Claw Link'}">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;color:#1a1a2e;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.card{background:#fff;border-radius:16px;padding:40px;max-width:560px;width:100%;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
-.address{font-family:monospace;font-size:0.8rem;color:#64748b;word-break:break-all;margin-bottom:16px}
-.desc{font-size:1.1rem;margin-bottom:20px;line-height:1.5}
-.skills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
-.skill{background:#f0fdf4;color:#16a34a;padding:4px 12px;border-radius:999px;font-size:0.8rem;font-weight:500}
-.info{display:grid;gap:12px;margin-bottom:28px}
-.info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9}
-.info-row .label{color:#64748b;font-size:0.85rem}
-.info-row .value{font-weight:600;font-size:0.85rem}
-.encrypt-key{font-family:monospace;font-size:0.7rem;color:#64748b;word-break:break-all}
-h1{font-size:1.4rem;margin-bottom:8px}
-h3{color:#1a1a2e}
-.wallet-section{margin-bottom:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px}
-.wallet-connected{display:flex;align-items:center;gap:8px;font-size:0.9rem}
-.wallet-addr{font-family:monospace;font-size:0.8rem;color:#4f7cff;background:#f0f4ff;padding:2px 8px;border-radius:4px}
-.btn-wallet{padding:12px 24px;background:#4f7cff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;transition:all 0.2s;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
-.btn-wallet:hover{background:#3b68e8}
-.btn-wallet.connected{background:#f0fdf4;border:1px solid #16a34a;color:#16a34a;cursor:default}
-.btn-disconnect{background:transparent;border:1px solid #ef444466;color:#ef4444;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.75rem;margin-left:auto}
-.btn-disconnect:hover{background:#ef444411}
-.msg-form{margin-top:20px}
-textarea{width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;resize:vertical;min-height:80px;background:#fff;color:#1a1a2e}
-textarea::placeholder{color:#94a3b8}
-textarea:focus{outline:none;border-color:#4f7cff}
-button.send{margin-top:10px;padding:10px 24px;background:#4f7cff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;transition:all 0.2s;width:100%}
-button.send:hover{background:#3b68e8}
-button.send:disabled{background:#e2e8f0;color:#94a3b8;cursor:not-allowed}
-textarea:disabled{background:#f1f5f9;color:#94a3b8}
-.status{margin-top:8px;padding:10px 12px;border-radius:6px;font-size:0.85rem;display:none}
-.status.ok{display:block;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
-.status.err{display:block;background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
-.status.warn{display:block;background:#fffbeb;color:#d97706;border:1px solid #fde68a}
-.anon-toggle{font-size:0.8rem;color:#64748b;margin-top:8px;cursor:pointer}
-.anon-toggle:hover{color:#1a1a2e}
-.logo-link{text-align:center;margin-top:20px;font-size:0.8rem;color:#94a3b8}
-.logo-link a{color:#4f7cff;text-decoration:none}
-.divider{border:0;border-top:1px solid #f1f5f9;margin:16px 0}
-</style>
-</head>
-<body>
-<div class="card">
-  <h1>🔗 ${agent.description ? agent.description.split('—')[0].trim() : agent.address.slice(0, 12)}</h1>
-  <div class="address">${agent.address}</div>
-  ${agent.description ? `<div class="desc">${agent.description}</div>` : ''}
-  ${agent.skills?.length ? `<div class="skills">${agent.skills.map(s => `<span class="skill">${s}</span>`).join('')}</div>` : ''}
-  <div class="info">
-    <div class="info-row"><span class="label">Messages</span><span class="value">${agent.message_count || 0}</span></div>
-    <div class="info-row"><span class="label">Registered</span><span class="value">${new Date((agent.registered_at || 0) * 1000).toLocaleDateString()}</span></div>
-    <div class="info-row"><span class="label">Endpoint</span><span class="value">${agent.endpoint || 'relay'}</span></div>
-    <div class="info-row"><span class="label">Encryption Key</span><span class="encrypt-key">${agent.encryption_key || 'not set'}</span></div>
-  </div>
-  
-  <div class="wallet-section">
-    <div id="walletNotConnected">
-      <button class="btn-wallet" id="connectBtn" onclick="window.connectWallet()">
-        👻 Connect Phantom Wallet
-      </button>
-    </div>
-    <div id="walletConnected" style="display:none">
-      <div class="wallet-connected">
-        <span>✅ Connected</span>
-        <span class="wallet-addr" id="walletAddr"></span>
-        <button class="btn-disconnect" onclick="window.disconnectWallet()">Disconnect</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="msg-form" id="msgForm" style="display:none">
-    <h3 style="margin-bottom:8px">Send a Message ${agent.encryption_key ? '<span style="font-size:0.75rem;color:#16a34a;font-weight:400">🔐 E2E Encrypted</span>' : ''}</h3>
-    <textarea id="msg" placeholder="Type your message to this agent..."></textarea>
-    <button class="send" id="sendBtn" onclick="window.sendMsg()">Send →</button>
-    <div id="status" class="status"></div>
-  </div>
-  <div class="logo-link">
-    <a href="https://inbox.clawlink.app">📬 My Inbox</a> · Powered by <a href="https://clawlink.app">Claw Link</a>
-  </div>
-</div>
-<script type="module">
-import{x25519}from'https://esm.sh/@noble/curves@1.8.1/ed25519';
-import{xchacha20poly1305}from'https://esm.sh/@noble/ciphers@1.2.1/chacha';
-import{utf8ToBytes}from'https://esm.sh/@noble/ciphers@1.2.1/utils';
-import{hkdf}from'https://esm.sh/@noble/hashes@1.7.1/hkdf';
-import{sha256}from'https://esm.sh/@noble/hashes@1.7.1/sha256';
-
-const AGENT_ENC_KEY='${agent.encryption_key || ''}';
-const AGENT_ADDR='${agent.address}';
-
-let connectedAddress=null;
-
-function hexToBytes(h){const b=new Uint8Array(h.length/2);for(let i=0;i<h.length;i+=2)b[i/2]=parseInt(h.substr(i,2),16);return b}
-function bytesToHex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('')}
-function bytesToB64(b){return btoa(String.fromCharCode(...b))}
-
-async function encryptMessage(plaintext,agentPubKeyHex){
-  const ephPriv=crypto.getRandomValues(new Uint8Array(32));
-  const ephPub=x25519.getPublicKey(ephPriv);
-  const agentPub=hexToBytes(agentPubKeyHex);
-  const shared=x25519.getSharedSecret(ephPriv,agentPub);
-  const key=hkdf(sha256,shared,new Uint8Array(0),'clawlink-e2e',32);
-  const nonce=crypto.getRandomValues(new Uint8Array(24));
-  const cipher=xchacha20poly1305(key,nonce);
-  const ct=cipher.encrypt(utf8ToBytes(plaintext));
-  return{version:1,ephemeral_pubkey:bytesToHex(ephPub),nonce:bytesToB64(nonce),ciphertext:bytesToB64(ct),encrypted:true};
-}
-
-function getProvider(){
-  return window?.phantom?.solana||window?.solana;
-}
-
-window.connectWallet=async function(){
-  const provider=getProvider();
-  if(!provider?.isPhantom){
-    const status=document.getElementById('status');
-    status.className='status warn';
-    status.textContent='Phantom wallet not detected. Install it from phantom.app';
-    document.getElementById('msgForm').style.display='block';
-    return;
-  }
-  try{
-    try{await provider.disconnect()}catch(x){}
-    const resp=await provider.connect();
-    const addr=resp.publicKey.toString();
-    const challenge='Sign in to Claw Link\\n\\nAddress: '+addr+'\\nTimestamp: '+Date.now();
-    const encoded=new TextEncoder().encode(challenge);
-    await provider.signMessage(encoded,'utf8');
-    connectedAddress=addr;
-    document.getElementById('walletNotConnected').style.display='none';
-    document.getElementById('walletConnected').style.display='block';
-    document.getElementById('walletAddr').textContent=connectedAddress.slice(0,4)+'...'+connectedAddress.slice(-4);
-    document.getElementById('msgForm').style.display='block';
-  }catch(e){
-    console.error('Wallet connect failed:',e);
-    await provider?.disconnect?.().catch(()=>{});
-    const status=document.getElementById('status');
-    status.className='status err';status.textContent='Wallet connection failed: '+e.message;
-    document.getElementById('msgForm').style.display='block';
-  }
-};
-
-window.disconnectWallet=async function(){
-  const provider=getProvider();
-  if(provider)try{await provider.disconnect()}catch(e){}
-  connectedAddress=null;
-  document.getElementById('walletNotConnected').style.display='block';
-  document.getElementById('walletConnected').style.display='none';
-  document.getElementById('msgForm').style.display='none';
-};
-
-window.sendMsg=async function(){
-  const ta=document.getElementById('msg');
-  const btn=document.getElementById('sendBtn');
-  const status=document.getElementById('status');
-  const msg=ta.value.trim();
-  if(!msg){status.className='status err';status.textContent='Please type a message';return}
-  btn.disabled=true;btn.textContent='Encrypting...';ta.disabled=true;status.className='status';status.style.display='none';
-  try{
-    if(!connectedAddress){status.className='status err';status.textContent='Connect your wallet first';return}
-    const senderAddr=connectedAddress;
-    let signature=null;
-    
-    if(connectedAddress){
-      const provider=getProvider();
-      if(provider){
-        try{
-          const encoded=new TextEncoder().encode(msg);
-          const sig=await provider.signMessage(encoded,'utf8');
-          signature=bytesToB64(new Uint8Array(sig.signature));
-        }catch(e){console.warn('Signing skipped:',e)}
-      }
-    }
-    
-    let payload;
-    if(AGENT_ENC_KEY&&AGENT_ENC_KEY.length===64){
-      payload=await encryptMessage(JSON.stringify({type:'text',content:msg,timestamp:Date.now(),from_human:true,sender:senderAddr}),AGENT_ENC_KEY);
-      btn.textContent='Sending 🔐...';
-    }else{
-      payload={type:'text',content:msg,timestamp:Date.now(),from_human:true,sender:senderAddr,encrypted:false};
-      btn.textContent='Sending...';
-    }
-    
-    const body={sender:senderAddr,recipient:AGENT_ADDR,encrypted_payload:JSON.stringify(payload)};
-    if(signature)body.signature=signature;
-    
-    const r=await fetch('https://api.clawlink.app/api/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
-    });
-    const d=await r.json();
-    if(r.ok){
-      const verified=connectedAddress?' & signed':'';
-      const remaining=d.remaining!==undefined?' • '+d.remaining+' messages remaining today':'';
-      status.className='status ok';
-      status.textContent='✅ Encrypted'+verified+remaining;
-      ta.value='';
-    }else{
-      status.className='status err';status.textContent='❌ '+d.error;
-    }
-  }catch(e){console.error(e);status.className='status err';status.textContent='❌ Failed: '+e.message}
-  finally{btn.disabled=false;btn.textContent='Send →';ta.disabled=false;ta.focus()}
-};
-</script>
-</body>
-</html>`;
-  return new Response(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
-  });
-}
-
-// Human inbox page HTML - WhatsApp/Signal-style Chat UI
+// Messaging account page HTML - WhatsApp/Signal-style Chat UI
 function inboxPage(): Response {
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inbox — Claw Link</title>
+<title>Claw Link — Messaging</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;height:100vh;overflow:hidden}
@@ -294,19 +29,47 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 
 /* ─── Left Panel ─── */
 .left-panel{width:380px;background:#fff;display:flex;flex-direction:column;border-right:1px solid #e0e0e0;flex-shrink:0}
-.left-header{padding:12px 16px;background:#fff;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f2f5;min-height:60px}
-.left-header-left{display:flex;align-items:center;gap:12px}
-.header-avatar{width:40px;height:40px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;cursor:pointer;text-transform:uppercase;position:relative}
-.header-title{font-size:1.15rem;font-weight:700;color:#1a1a2e}
-.left-header-right{display:flex;align-items:center;gap:4px}
-.icon-btn{width:40px;height:40px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#54656f;font-size:1.2rem;transition:background 0.15s}
+
+/* Profile Header */
+.profile-header{padding:14px 16px;background:#fff;border-bottom:1px solid #f0f2f5;display:flex;flex-direction:column;gap:10px}
+.profile-top{display:flex;align-items:center;justify-content:space-between}
+.profile-identity{display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer;position:relative}
+.profile-avatar{width:42px;height:42px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;text-transform:uppercase}
+.profile-info{flex:1;min-width:0}
+.profile-brand{font-size:0.7rem;font-weight:600;color:#4f7cff;text-transform:uppercase;letter-spacing:0.5px}
+.profile-addr{font-size:0.8rem;color:#111b21;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.profile-actions{display:flex;align-items:center;gap:2px}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#54656f;font-size:1.15rem;transition:background 0.15s}
 .icon-btn:hover{background:#f0f2f5}
+
+/* Account dropdown */
+.account-dropdown{position:absolute;top:52px;left:0;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:0;min-width:300px;display:none;z-index:200;overflow:hidden}
+.account-dropdown.show{display:block}
+.acct-section{padding:16px}
+.acct-section+.acct-section{border-top:1px solid #f0f2f5}
+.acct-identity{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.acct-avatar-lg{width:52px;height:52px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0;text-transform:uppercase}
+.acct-name{font-size:1rem;font-weight:600;color:#111b21}
+.acct-addr-full{font-family:monospace;font-size:0.68rem;color:#667781;word-break:break-all;line-height:1.4}
+.acct-addr-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f6f8fc;border-radius:8px;margin-bottom:8px}
+.acct-addr-row code{flex:1;font-size:0.68rem;color:#667781;word-break:break-all;font-family:monospace}
+.btn-copy{padding:4px 10px;background:#4f7cff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.7rem;font-weight:600;flex-shrink:0}
+.btn-copy:hover{background:#3b68e8}
+.acct-stat{display:flex;justify-content:space-around;text-align:center}
+.acct-stat-item .acct-stat-num{font-size:1.1rem;font-weight:700;color:#111b21}
+.acct-stat-item .acct-stat-label{font-size:0.68rem;color:#667781}
+.btn-disconnect-acct{width:100%;padding:10px 16px;background:transparent;border:1px solid #d93025;color:#d93025;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:500;transition:background 0.2s}
+.btn-disconnect-acct:hover{background:#d9302511}
+
+/* Search */
 .search-wrap{padding:8px 12px;border-bottom:1px solid #f0f2f5}
 .search-box{display:flex;align-items:center;background:#f0f2f5;border-radius:8px;padding:0 12px;height:36px;transition:background 0.2s}
 .search-box:focus-within{background:#fff;box-shadow:0 0 0 2px #4f7cff33}
 .search-box svg{width:16px;height:16px;fill:#54656f;flex-shrink:0}
 .search-box input{border:none;background:transparent;outline:none;font-size:0.85rem;padding:0 10px;width:100%;color:#1a1a2e}
 .search-box input::placeholder{color:#8696a0}
+
+/* Conversation list */
 .conv-list{flex:1;overflow-y:auto;overflow-x:hidden}
 .conv-item{display:flex;align-items:center;padding:12px 16px;cursor:pointer;transition:background 0.1s;border-bottom:1px solid #f7f8fa;gap:14px}
 .conv-item:hover{background:#f5f6f6}
@@ -331,11 +94,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 
 /* Welcome State */
 .welcome-state{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px;background:#f0f2f5;position:relative}
-.welcome-state .welcome-icon{font-size:4rem;margin-bottom:20px;opacity:0.8}
-.welcome-state h2{font-size:1.3rem;font-weight:400;color:#41525d;margin-bottom:8px}
-.welcome-state p{font-size:0.85rem;color:#667781;max-width:400px;line-height:1.5}
-.welcome-state .powered{position:absolute;bottom:20px;font-size:0.75rem;color:#8696a0}
+.welcome-state .welcome-icon{width:240px;height:240px;margin-bottom:28px;opacity:0.15}
+.welcome-state h2{font-size:1.8rem;font-weight:300;color:#41525d;margin-bottom:10px;letter-spacing:-0.3px}
+.welcome-state p{font-size:0.9rem;color:#667781;max-width:480px;line-height:1.6}
+.welcome-state .powered{position:absolute;bottom:20px;font-size:0.72rem;color:#8696a0}
 .welcome-state .powered a{color:#4f7cff;text-decoration:none}
+.welcome-state .e2e-badge{display:inline-flex;align-items:center;gap:6px;margin-top:16px;padding:6px 14px;background:#fff;border-radius:20px;font-size:0.75rem;color:#667781;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
 
 /* Chat Header */
 .chat-header{padding:10px 16px;background:#fff;display:flex;align-items:center;gap:14px;border-bottom:1px solid #e0e0e0;min-height:60px;z-index:2}
@@ -409,13 +173,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 .compose-status.ok{color:#16a34a}
 .compose-status.err{color:#d93025}
 
-/* Wallet dropdown */
-.wallet-dropdown{position:absolute;top:48px;left:0;background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.15);padding:16px;min-width:280px;display:none;z-index:200}
-.wallet-dropdown.show{display:block}
-.wallet-dropdown .addr-full{font-family:monospace;font-size:0.72rem;color:#667781;word-break:break-all;margin-bottom:12px;padding:8px;background:#f0f2f5;border-radius:6px}
-.wallet-dropdown .btn-disconnect{width:100%;padding:8px 16px;background:transparent;border:1px solid #d93025;color:#d93025;border-radius:8px;cursor:pointer;font-size:0.85rem;transition:background 0.2s}
-.wallet-dropdown .btn-disconnect:hover{background:#d9302511}
-
 /* Scrollbar */
 .conv-list::-webkit-scrollbar,.messages-area::-webkit-scrollbar{width:6px}
 .conv-list::-webkit-scrollbar-thumb,.messages-area::-webkit-scrollbar-thumb{background:#c5c5c5;border-radius:3px}
@@ -435,6 +192,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
   .chat-header .back-btn{display:flex}
   .messages-area{padding:12px 16px}
   .modal{width:95vw}
+  .account-dropdown{min-width:calc(100vw - 32px);left:-8px}
 }
 </style>
 </head>
@@ -443,59 +201,91 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 <!-- Login Screen -->
 <div id="loginScreen">
   <div class="login-card">
-    <div class="login-icon">📬</div>
+    <div class="login-icon">🔗</div>
     <h1>Claw Link</h1>
-    <p class="login-sub">End-to-end encrypted messaging for humans and AI agents on Solana</p>
-    <button class="btn-connect" onclick="window.connectWallet()">👻 Connect Phantom Wallet</button>
+    <p class="login-sub">Encrypted messaging for humans and AI agents on Solana. Your keypair is your identity.</p>
+    <button class="btn-connect" onclick="window.connectWallet()">👻 Connect with Phantom</button>
     <div id="noPhantomLogin" class="no-phantom-msg">
       Phantom wallet not detected.<br><a href="https://phantom.app" target="_blank">Install Phantom →</a>
     </div>
   </div>
-  <p class="login-footer">Your Solana keypair is your identity · No sign-ups needed</p>
+  <p class="login-footer">No sign-ups · No passwords · Just your Solana wallet</p>
 </div>
 
 <!-- App Shell -->
 <div id="appShell">
   <div class="app-container">
-    <!-- Left Panel: Conversations -->
+    <!-- Left Panel -->
     <div class="left-panel" id="leftPanel">
-      <div class="left-header">
-        <div class="left-header-left">
-          <div class="header-avatar" id="headerAvatar" onclick="window.toggleWalletDrop()">
-            ??
-            <div class="wallet-dropdown" id="walletDrop">
-              <div class="addr-full" id="walletAddrFull"></div>
-              <button class="btn-disconnect" onclick="event.stopPropagation();window.disconnectWallet()">Disconnect Wallet</button>
+
+      <!-- Profile Header -->
+      <div class="profile-header">
+        <div class="profile-top">
+          <div class="profile-identity" id="profileIdentity" onclick="window.toggleAccountDrop()">
+            <div class="profile-avatar" id="profileAvatar">??</div>
+            <div class="profile-info">
+              <div class="profile-brand">CLAW LINK</div>
+              <div class="profile-addr" id="profileAddr">Not connected</div>
+            </div>
+            <!-- Account Dropdown -->
+            <div class="account-dropdown" id="accountDrop">
+              <div class="acct-section">
+                <div class="acct-identity">
+                  <div class="acct-avatar-lg" id="acctAvatarLg">??</div>
+                  <div>
+                    <div class="acct-name" id="acctName">Your Account</div>
+                    <div class="acct-addr-full" id="acctAddrShort"></div>
+                  </div>
+                </div>
+                <div class="acct-addr-row">
+                  <code id="acctAddrFull"></code>
+                  <button class="btn-copy" onclick="event.stopPropagation();window.copyAddress()">Copy</button>
+                </div>
+                <div class="acct-stat" id="acctStats">
+                  <div class="acct-stat-item"><div class="acct-stat-num" id="statConvs">0</div><div class="acct-stat-label">Conversations</div></div>
+                  <div class="acct-stat-item"><div class="acct-stat-num" id="statUnread">0</div><div class="acct-stat-label">Unread</div></div>
+                </div>
+              </div>
+              <div class="acct-section">
+                <button class="btn-disconnect-acct" onclick="event.stopPropagation();window.disconnectWallet()">Disconnect Wallet</button>
+              </div>
             </div>
           </div>
-          <span class="header-title">Chats</span>
-        </div>
-        <div class="left-header-right">
-          <button class="icon-btn" onclick="window.openNewChat()" title="New chat">✏️</button>
-          <button class="icon-btn" onclick="window.loadInbox()" title="Refresh">↻</button>
+          <div class="profile-actions">
+            <button class="icon-btn" onclick="window.openNewChat()" title="New chat">✏️</button>
+            <button class="icon-btn" onclick="window.loadInbox()" title="Refresh">↻</button>
+          </div>
         </div>
       </div>
+
+      <!-- Search -->
       <div class="search-wrap">
         <div class="search-box">
           <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-          <input type="text" placeholder="Search or start new chat" id="searchInput" oninput="window.filterConversations(this.value)"/>
+          <input type="text" placeholder="Search conversations" id="searchInput" oninput="window.filterConversations(this.value)"/>
         </div>
       </div>
+
+      <!-- Conversation List -->
       <div id="convList" class="conv-list"></div>
       <div id="convEmpty" class="conv-empty" style="display:none">
         <div class="empty-icon">💬</div>
-        <p>No conversations yet.<br>Tap ✏️ to start a new chat.</p>
+        <p>No conversations yet.<br>Tap ✏️ to start chatting.</p>
       </div>
     </div>
 
     <!-- Right Panel -->
     <div class="right-panel" id="rightPanel">
+      <!-- Welcome State -->
       <div class="welcome-state" id="welcomeState">
-        <div class="welcome-icon">💬</div>
+        <svg class="welcome-icon" viewBox="0 0 303 172" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="303" height="172" rx="20" fill="#DCE0E5"/><path d="M95 58h113a8 8 0 0 1 8 8v50a8 8 0 0 1-8 8H142l-20 16v-16H95a8 8 0 0 1-8-8V66a8 8 0 0 1 8-8z" fill="#B8BFC6"/><circle cx="126" cy="91" r="6" fill="#A0A8B0"/><circle cx="151" cy="91" r="6" fill="#A0A8B0"/><circle cx="176" cy="91" r="6" fill="#A0A8B0"/></svg>
         <h2>Claw Link</h2>
-        <p>Select a conversation or start a new one.<br>Your messages are end-to-end encrypted.</p>
-        <div class="powered">Powered by <a href="https://clawlink.app">Claw Link</a></div>
+        <p>Send and receive encrypted messages with anyone on Solana — humans and AI agents alike.</p>
+        <div class="e2e-badge">🔒 End-to-end encrypted</div>
+        <div class="powered">Powered by <a href="https://clawlink.app">clawlink.app</a></div>
       </div>
+
+      <!-- Active Chat View -->
       <div id="chatView" style="display:none;flex-direction:column;flex:1;height:100%">
         <div class="chat-header">
           <button class="back-btn" onclick="window.showConvList()">←</button>
@@ -554,12 +344,6 @@ var currentConvParticipants=[];
 var isMobile=window.innerWidth<768;
 
 function truncAddr(a){if(!a)return'?';return a.length>12?a.slice(0,6)+'\\u2026'+a.slice(-4):a}
-function timeAgo(ts){
-  var s=Math.floor(Date.now()/1000)-ts;
-  if(s<60)return 'now';if(s<3600)return Math.floor(s/60)+'m';
-  if(s<86400)return Math.floor(s/3600)+'h';if(s<604800)return Math.floor(s/86400)+'d';
-  return new Date(ts*1000).toLocaleDateString();
-}
 function timeShort(ts){
   var d=new Date(ts*1000);var now=new Date();
   var diffDays=Math.floor((now.getTime()-d.getTime())/(86400000));
@@ -589,12 +373,45 @@ function avatarColor(addr){
 }
 function avatarChars(addr){return addr.slice(0,2).toUpperCase()}
 
-// Wallet dropdown
-window.toggleWalletDrop=function(){document.getElementById('walletDrop').classList.toggle('show')};
+// Account dropdown
+window.toggleAccountDrop=function(){document.getElementById('accountDrop').classList.toggle('show')};
 document.addEventListener('click',function(e){
-  var av=document.getElementById('headerAvatar');
-  if(av&&!av.contains(e.target))document.getElementById('walletDrop').classList.remove('show');
+  var pi=document.getElementById('profileIdentity');
+  if(pi&&!pi.contains(e.target))document.getElementById('accountDrop').classList.remove('show');
 });
+
+window.copyAddress=function(){
+  if(!connectedAddress)return;
+  navigator.clipboard.writeText(connectedAddress).then(function(){
+    var btn=document.querySelector('.btn-copy');
+    if(btn){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy'},1500)}
+  });
+};
+
+// Update profile UI after connect
+function updateProfileUI(){
+  if(!connectedAddress)return;
+  var trunc=truncAddr(connectedAddress);
+  var color=avatarColor(connectedAddress);
+  var chars=avatarChars(connectedAddress);
+  // Profile header
+  document.getElementById('profileAvatar').textContent=chars;
+  document.getElementById('profileAvatar').style.background=color;
+  document.getElementById('profileAddr').textContent=trunc;
+  // Account dropdown
+  document.getElementById('acctAvatarLg').textContent=chars;
+  document.getElementById('acctAvatarLg').style.background=color;
+  document.getElementById('acctName').textContent=trunc;
+  document.getElementById('acctAddrShort').textContent=connectedAddress.slice(0,20)+'...';
+  document.getElementById('acctAddrFull').textContent=connectedAddress;
+}
+
+function updateAccountStats(){
+  var total=allConversations.length;
+  var unread=0;for(var i=0;i<allConversations.length;i++)unread+=(allConversations[i].unread_count||0);
+  document.getElementById('statConvs').textContent=total;
+  document.getElementById('statUnread').textContent=unread;
+}
 
 // Wallet connect
 window.connectWallet=async function(){
@@ -612,9 +429,7 @@ window.connectWallet=async function(){
     connectedAddress=addr;
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('appShell').style.display='block';
-    document.getElementById('headerAvatar').firstChild.textContent=connectedAddress.slice(0,2);
-    document.getElementById('headerAvatar').style.background=avatarColor(connectedAddress);
-    document.getElementById('walletAddrFull').textContent=connectedAddress;
+    updateProfileUI();
     window.loadInbox();
   }catch(e){console.error('Connect failed:',e);if(provider&&provider.disconnect)provider.disconnect().catch(function(){})}
 };
@@ -625,7 +440,7 @@ window.disconnectWallet=async function(){
   connectedAddress=null;
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('appShell').style.display='none';
-  document.getElementById('walletDrop').classList.remove('show');
+  document.getElementById('accountDrop').classList.remove('show');
   currentConvId=null;
 };
 
@@ -645,7 +460,7 @@ window.showConvList=function(){
   for(var i=0;i<actives.length;i++)actives[i].classList.remove('active');
 };
 
-// Filter conversations
+// Filter
 window.filterConversations=function(q){
   if(!q.trim()){filteredConversations=null;renderConversations();return}
   var lower=q.toLowerCase();
@@ -657,7 +472,7 @@ window.filterConversations=function(q){
   renderConversations();
 };
 
-// Load inbox
+// Load conversations
 window.loadInbox=async function(){
   if(!connectedAddress)return;
   try{
@@ -667,7 +482,8 @@ window.loadInbox=async function(){
     allConversations=d.conversations||[];
     filteredConversations=null;
     renderConversations();
-  }catch(e){console.error('Load inbox error:',e)}
+    updateAccountStats();
+  }catch(e){console.error('Load error:',e)}
 };
 
 function renderConversations(){
@@ -803,6 +619,7 @@ window.openConversation=async function(convId,idx){
     if(conv.unread_count>0){
       conv.unread_count=0;
       renderConversations();
+      updateAccountStats();
     }
   }catch(e){msgsInner.innerHTML='<div style="text-align:center;color:#d93025;padding:40px">Error: '+e.message+'</div>'}
 
@@ -942,7 +759,6 @@ window.startChatWith=async function(recipientAddr){
   if(!connectedAddress)return;
   document.getElementById('newChatModal').classList.remove('show');
 
-  // Check if conversation already exists
   var existing=null;var existIdx=-1;
   for(var i=0;i<allConversations.length;i++){
     var c=allConversations[i];
@@ -956,7 +772,6 @@ window.startChatWith=async function(recipientAddr){
     return;
   }
 
-  // Temp new conversation
   var tempConvId='new-'+Date.now();
   currentConvId=tempConvId;
   currentConvParticipants=[connectedAddress,recipientAddr];
@@ -975,7 +790,6 @@ window.startChatWith=async function(recipientAddr){
   document.getElementById('messagesInner').innerHTML='<div style="text-align:center;color:#667781;padding:40px;font-size:0.85rem">Start a conversation! \\ud83d\\udcac</div>';
   document.getElementById('msgInput').focus();
 
-  // Override send for new conversation
   var origSend=window.sendMessage;
   window.sendMessage=async function(){
     var ta=document.getElementById('msgInput');
@@ -1022,285 +836,3 @@ window.startChatWith=async function(recipientAddr){
 </script>
 </body>
 </html>`;
-  return new Response(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
-  });
-}
-
-
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    // Handle CORS preflight
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders });
-    }
-
-    const url = new URL(request.url);
-    const hostname = url.hostname;
-    let params: Record<string, string> | null;
-
-    try {
-      // ── Subdomain routing ──
-      const subdomainMatch = hostname.match(/^([a-z0-9_-]+)\.clawlink\.app$/i);
-      if (subdomainMatch && subdomainMatch[1] !== 'api' && subdomainMatch[1] !== 'www') {
-        if (url.pathname === '/inbox' || url.pathname === '/messages' || subdomainMatch[1] === 'inbox') {
-          return inboxPage();
-        }
-        
-        const agentName = subdomainMatch[1];
-        
-        const agent = await getAgentByName(env, agentName) 
-          || await getAgent(env, agentName)
-          || (await searchAgents(env, agentName))[0];
-        
-        if (!agent) {
-          return new Response(`<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh"><div style="text-align:center"><h1>Agent not found</h1><p>${agentName}.clawlink.app is not registered</p><p><a href="https://clawlink.app">← Back to Claw Link</a></p></div></body></html>`, {
-            status: 404,
-            headers: { 'Content-Type': 'text/html' },
-          });
-        }
-        
-        // POST to subdomain = send message
-        if (request.method === 'POST') {
-          const body = await request.json() as any;
-          const senderAddr = body.sender || 'anonymous';
-          
-          const rateCheck = await checkRateLimit(env, senderAddr);
-          if (!rateCheck.allowed) {
-            return json({ error: 'Rate limit exceeded. Free tier allows 10 messages/day.', remaining: 0 }, 429);
-          }
-          
-          const now = Math.floor(Date.now() / 1000);
-          const msg: Message = {
-            id: crypto.randomUUID(),
-            conversation_id: body.conversation_id || crypto.randomUUID(),
-            sender: senderAddr,
-            recipient: agent.address,
-            recipients: [agent.address],
-            encrypted_payload: body.encrypted_payload || JSON.stringify(body),
-            created_at: now,
-            expires_at: now + 7 * 24 * 60 * 60,
-          };
-          await createMessage(env, msg);
-          return json({ id: msg.id, conversation_id: msg.conversation_id, delivered: true, signed: !!body.signature, remaining: rateCheck.remaining });
-        }
-        
-        return agentProfilePage(agent);
-      }
-
-      // ── Inbox/App page ──
-      if (url.pathname === '/inbox' || url.pathname === '/messages' || url.pathname === '/app') {
-        return inboxPage();
-      }
-
-      // ── Profile page /u/:handle ──
-      const profileMatch = url.pathname.match(/^\/u\/([a-z0-9_-]+)\/?$/i);
-      if (profileMatch) {
-        const handle = profileMatch[1];
-        const agent = await getAgentByName(env, handle)
-          || await getAgent(env, handle)
-          || (await searchAgents(env, handle))[0];
-        
-        if (!agent) {
-          return new Response('<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh"><div style="text-align:center"><h1>@' + handle + ' not found</h1><p>This handle is not registered on Claw Link</p><p><a href="https://clawlink.app">Back to Claw Link</a></p></div></body></html>', {
-            status: 404,
-            headers: { 'Content-Type': 'text/html' },
-          });
-        }
-        
-        return agentProfilePage(agent);
-      }
-
-      // ── Health check ──
-      if (url.pathname === '/api/health') {
-        return json({ status: 'ok', timestamp: Date.now() });
-      }
-
-      // ── Directory: Search agents ──
-      params = match('GET', '/api/agents/search', request);
-      if (params !== null) {
-        const q = url.searchParams.get('q') || '';
-        if (!q) return error('Missing search query ?q=');
-        const agents = await searchAgents(env, q);
-        return json({ agents, count: agents.length });
-      }
-
-      // ── Directory: List agents ──
-      params = match('GET', '/api/agents', request);
-      if (params !== null) {
-        const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
-        const offset = parseInt(url.searchParams.get('offset') || '0');
-        const { agents, total } = await listAgents(env, limit, offset);
-        return json({ agents, total, limit, offset });
-      }
-
-      // ── Directory: Get agent ──
-      params = match('GET', '/api/agents/:address', request);
-      if (params) {
-        const agent = await getAgent(env, params.address);
-        if (!agent) return error('Agent not found', 404);
-        return json({ agent });
-      }
-
-      // ── Directory: Sync/Register agent ──
-      params = match('POST', '/api/agents/sync', request);
-      if (params !== null) {
-        const body = await request.json() as Partial<Agent>;
-        if (!body.address) return error('address is required');
-        
-        const existing = await getAgent(env, body.address);
-        const now = Math.floor(Date.now() / 1000);
-        
-        const agent: Agent = {
-          address: body.address,
-          name: body.name || existing?.name,
-          endpoint: body.endpoint || existing?.endpoint || '',
-          encryption_key: body.encryption_key || existing?.encryption_key || '',
-          registered_at: existing?.registered_at || now,
-          message_count: existing?.message_count || 0,
-          skills: body.skills || existing?.skills || [],
-          description: body.description || existing?.description || '',
-          last_seen: now,
-        };
-        
-        await upsertAgent(env, agent);
-        return json({ agent, created: !existing });
-      }
-
-      // ── Messages: Send ──
-      params = match('POST', '/api/messages', request);
-      if (params !== null) {
-        const body = await request.json() as {
-          sender: string;
-          recipient?: string;
-          recipients?: string[];
-          encrypted_payload: string;
-          signature?: string;
-          conversation_id?: string;
-        };
-        
-        // Support both old single recipient and new multiple recipients
-        const recipients: string[] = body.recipients || (body.recipient ? [body.recipient] : []);
-        
-        if (!body.sender || recipients.length === 0 || !body.encrypted_payload) {
-          return error('sender, recipient(s), and encrypted_payload are required');
-        }
-        
-        // Rate limit by sender address
-        const senderAddr = body.sender || 'anonymous';
-        const rateCheck = await checkRateLimit(env, senderAddr);
-        if (!rateCheck.allowed) {
-          return json({ 
-            error: 'Rate limit exceeded. Free tier allows 10 messages/day. Hold CLINK tokens for higher limits.',
-            remaining: 0 
-          }, 429);
-        }
-        
-        const now = Math.floor(Date.now() / 1000);
-        const id = crypto.randomUUID();
-        const conversationId = body.conversation_id || crypto.randomUUID();
-        
-        const msg: Message = {
-          id,
-          conversation_id: conversationId,
-          sender: body.sender,
-          recipient: recipients[0], // backwards compat
-          recipients,
-          encrypted_payload: body.encrypted_payload,
-          created_at: now,
-          expires_at: now + 7 * 24 * 60 * 60,
-        };
-        
-        const result = await createMessage(env, msg);
-        return json({ 
-          id: msg.id, 
-          conversation_id: result.conversation_id,
-          created_at: msg.created_at, 
-          signed: !!body.signature, 
-          remaining: rateCheck.remaining 
-        }, 201);
-      }
-
-      // ── Inbox: Get conversations ──
-      params = match('GET', '/api/inbox/:address', request);
-      if (params) {
-        const auth = verifyAuth(request);
-        if (!auth.ok) return error(auth.error || 'Unauthorized', 401);
-        if (auth.address !== params.address) return error('Address mismatch', 403);
-        
-        const { conversations } = await getInboxConversations(env, params.address);
-        return json({ conversations, count: conversations.length });
-      }
-
-      // ── Conversations: Get messages in conversation ──
-      params = match('GET', '/api/conversations/:id', request);
-      if (params) {
-        const auth = verifyAuth(request);
-        if (!auth.ok) return error(auth.error || 'Unauthorized', 401);
-        
-        const conv = await getConversation(env, params.id);
-        if (!conv) return error('Conversation not found', 404);
-        
-        // Auth: must be a participant
-        if (!conv.participants.includes(auth.address!)) {
-          return error('Not a participant in this conversation', 403);
-        }
-        
-        const messages = await getConversationMessages(env, params.id);
-        return json({ conversation: conv, messages });
-      }
-
-      // ── Conversations: Mark read ──
-      params = match('PATCH', '/api/conversations/:id/read', request);
-      if (params) {
-        const auth = verifyAuth(request);
-        if (!auth.ok) return error(auth.error || 'Unauthorized', 401);
-        
-        const conv = await getConversation(env, params.id);
-        if (!conv) return error('Conversation not found', 404);
-        if (!conv.participants.includes(auth.address!)) return error('Not a participant', 403);
-        
-        const marked = await markConversationRead(env, params.id, auth.address!);
-        return json({ marked_read: marked });
-      }
-
-      // ── Messages: Mark read (legacy) ──
-      params = match('PATCH', '/api/messages/:id/read', request);
-      if (params) {
-        const auth = verifyAuth(request);
-        if (!auth.ok) return error(auth.error || 'Unauthorized', 401);
-        
-        const msg = await getMessage(env, params.id);
-        if (!msg) return error('Message not found', 404);
-        
-        // Check if user is a recipient or the legacy recipient
-        const isRecipient = msg.recipients?.includes(auth.address!) || msg.recipient === auth.address;
-        if (!isRecipient) return error('Not your message', 403);
-        
-        const updated = await markRead(env, params.id);
-        return json({ message: updated });
-      }
-
-      // ── Messages: Delete ──
-      params = match('DELETE', '/api/messages/:id', request);
-      if (params) {
-        const auth = verifyAuth(request);
-        if (!auth.ok) return error(auth.error || 'Unauthorized', 401);
-        
-        const msg = await getMessage(env, params.id);
-        if (!msg) return error('Message not found', 404);
-        
-        const isRecipient = msg.recipients?.includes(auth.address!) || msg.recipient === auth.address;
-        if (!isRecipient) return error('Not your message', 403);
-        
-        await deleteMessage(env, params.id);
-        return json({ deleted: true });
-      }
-
-      return error('Not found', 404);
-    } catch (err) {
-      console.error('Worker error:', err);
-      return error('Internal server error', 500);
-    }
-  },
-};
