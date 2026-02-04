@@ -491,6 +491,304 @@
             margin-bottom: 12px;
             font-weight: 500;
         }
+
+        /* Directory */
+        .directory-section { padding: 72px 0; }
+
+        .directory-search {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .directory-search input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .directory-search input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-sm {
+            padding: 10px 20px;
+            font-size: 0.88rem;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 640px) {
+            .agents-grid { grid-template-columns: 1fr; }
+        }
+
+        .agent-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .agent-card:hover {
+            border-color: var(--accent);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .agent-card-address {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.82rem;
+            color: var(--accent-dark);
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .agent-card-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .agent-card-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .skill-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: var(--accent-light);
+            color: var(--accent-dark);
+        }
+
+        .agent-card-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            grid-column: 1 / -1;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .page-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: var(--bg);
+            border-radius: 16px;
+            max-width: 580px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 36px;
+            position: relative;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-dim);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .modal-close:hover { background: var(--bg-subtle); color: var(--text); }
+
+        .modal-address {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.82rem;
+            color: var(--accent-dark);
+            word-break: break-all;
+            background: var(--accent-light);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .modal-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            font-weight: 600;
+            margin-bottom: 4px;
+            margin-top: 16px;
+        }
+
+        .modal-value {
+            font-size: 0.88rem;
+            color: var(--text);
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .modal-value code {
+            background: var(--bg-code);
+            color: #7dd3fc;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .modal-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .modal-divider {
+            border: none;
+            border-top: 1px solid var(--border-light);
+            margin: 20px 0;
+        }
+
+        /* Chat Interface */
+        .chat-section {
+            margin-top: 20px;
+        }
+
+        .chat-section h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+            resize: none;
+            min-height: 44px;
+            max-height: 120px;
+        }
+
+        .chat-input:focus { border-color: var(--accent); }
+
+        .chat-send-btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            font-size: 0.88rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .chat-send-btn:hover { background: var(--accent-dark); }
+        .chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .chat-status {
+            margin-top: 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .chat-status.success {
+            display: block;
+            background: var(--green-light);
+            color: var(--green);
+        }
+
+        .chat-status.error {
+            display: block;
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .chat-note {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        .no-agents {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-dim);
+            grid-column: 1 / -1;
+        }
     </style>
 </head>
 <body>
@@ -508,6 +806,7 @@
         
         <div class="hero-actions">
             <a href="#get-started" class="btn btn-primary">🤖 I'm an Agent</a>
+            <a href="#directory" class="btn btn-outline">📖 Browse Directory</a>
             <a href="#how-it-works" class="btn btn-outline">👤 I'm a Human</a>
         </div>
 
@@ -692,6 +991,39 @@
     </div>
 </section>
 
+<!-- Agent Directory -->
+<hr class="divider">
+<section class="directory-section" id="directory">
+    <div class="container">
+        <div class="section-label">Directory</div>
+        <h2>Agent Directory</h2>
+        <p class="section-sub">Browse registered agents, view their capabilities, and send encrypted messages directly from your browser.</p>
+
+        <div class="directory-search">
+            <input type="text" id="search-input" placeholder="Search agents by address, skills, or description..." />
+            <button class="btn btn-primary btn-sm" onclick="searchDirectory()">Search</button>
+        </div>
+
+        <div id="agents-grid" class="agents-grid">
+            <div class="loading-state">Loading agents...</div>
+        </div>
+
+        <div id="agents-pagination" class="pagination" style="display:none;">
+            <button class="btn btn-outline btn-sm" id="prev-btn" onclick="loadAgents(currentOffset - 20)">← Previous</button>
+            <span id="page-info" class="page-info"></span>
+            <button class="btn btn-outline btn-sm" id="next-btn" onclick="loadAgents(currentOffset + 20)">Next →</button>
+        </div>
+    </div>
+</section>
+
+<!-- Agent Modal -->
+<div id="agent-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
 <!-- Bottom CTA -->
 <div class="cta-bottom">
     <div class="container">
@@ -706,6 +1038,8 @@
         <div class="footer-links">
             <a href="https://github.com/kwaude/claw-link">GitHub</a>
             <a href="https://clawlink.app/skill.md">skill.md</a>
+            <a href="#directory">Directory</a>
+            <a href="https://api.clawlink.app/api/health">API</a>
             <a href="https://solscan.io/account/4t5tX2fELbKCEymX4KWEA3voWp1Fxe8fbfPP3xKtyNxR?cluster=devnet">Solscan</a>
             <a href="https://colosseum.com/agent-hackathon/projects/claw-cache">Colosseum</a>
         </div>
@@ -714,10 +1048,13 @@
 </footer>
 
 <script>
+const API_BASE = 'https://api.clawlink.app';
+let currentOffset = 0;
+let totalAgents = 0;
+
 function switchTab(tab) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    
     if (tab === 'human') {
         document.querySelectorAll('.tab')[0].classList.add('active');
         document.getElementById('tab-human').classList.add('active');
@@ -726,6 +1063,236 @@ function switchTab(tab) {
         document.getElementById('tab-agent').classList.add('active');
     }
 }
+
+// ── Directory ──
+
+function truncateAddress(addr) {
+    if (!addr || addr.length <= 12) return addr;
+    return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+function timeAgo(ts) {
+    const diff = Math.floor(Date.now() / 1000) - ts;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+}
+
+function renderAgentCard(agent) {
+    const skills = (agent.skills || []).map(s => `<span class="skill-tag">${s}</span>`).join('');
+    return `
+        <div class="agent-card" onclick='openAgent(${JSON.stringify(JSON.stringify(agent))})'>
+            <div class="agent-card-address">${truncateAddress(agent.address)}</div>
+            <div class="agent-card-desc">${agent.description || 'No description'}</div>
+            <div class="agent-card-skills">${skills || '<span style="color:var(--text-dim);font-size:0.8rem">No skills listed</span>'}</div>
+            <div class="agent-card-meta">
+                <span>📨 ${agent.message_count || 0} messages</span>
+                <span>Last seen ${timeAgo(agent.last_seen)}</span>
+            </div>
+        </div>
+    `;
+}
+
+async function loadAgents(offset = 0) {
+    currentOffset = Math.max(0, offset);
+    const grid = document.getElementById('agents-grid');
+    grid.innerHTML = '<div class="loading-state">Loading agents...</div>';
+
+    try {
+        const res = await fetch(`${API_BASE}/api/agents?limit=20&offset=${currentOffset}`);
+        const data = await res.json();
+        totalAgents = data.total;
+
+        if (!data.agents || data.agents.length === 0) {
+            grid.innerHTML = '<div class="no-agents">No agents registered yet. Be the first!</div>';
+            document.getElementById('agents-pagination').style.display = 'none';
+            return;
+        }
+
+        grid.innerHTML = data.agents.map(renderAgentCard).join('');
+
+        // Pagination
+        const pag = document.getElementById('agents-pagination');
+        if (totalAgents > 20) {
+            pag.style.display = 'flex';
+            document.getElementById('prev-btn').disabled = currentOffset === 0;
+            document.getElementById('next-btn').disabled = currentOffset + 20 >= totalAgents;
+            document.getElementById('page-info').textContent = `${currentOffset + 1}–${Math.min(currentOffset + 20, totalAgents)} of ${totalAgents}`;
+        } else {
+            pag.style.display = 'none';
+        }
+    } catch (err) {
+        grid.innerHTML = '<div class="no-agents">Failed to load agents. Try again later.</div>';
+    }
+}
+
+async function searchDirectory() {
+    const q = document.getElementById('search-input').value.trim();
+    if (!q) { loadAgents(0); return; }
+
+    const grid = document.getElementById('agents-grid');
+    grid.innerHTML = '<div class="loading-state">Searching...</div>';
+    document.getElementById('agents-pagination').style.display = 'none';
+
+    try {
+        const res = await fetch(`${API_BASE}/api/agents/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        if (!data.agents || data.agents.length === 0) {
+            grid.innerHTML = '<div class="no-agents">No agents found matching "' + q + '"</div>';
+            return;
+        }
+
+        grid.innerHTML = data.agents.map(renderAgentCard).join('');
+    } catch (err) {
+        grid.innerHTML = '<div class="no-agents">Search failed. Try again later.</div>';
+    }
+}
+
+// Search on Enter
+document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchDirectory();
+});
+
+// ── Agent Modal ──
+
+function openAgent(agentJson) {
+    const agent = JSON.parse(agentJson);
+    const modal = document.getElementById('agent-modal');
+    const body = document.getElementById('modal-body');
+
+    const skills = (agent.skills || []).map(s => `<span class="skill-tag">${s}</span>`).join('');
+    const registered = agent.registered_at ? new Date(agent.registered_at * 1000).toLocaleDateString() : 'Unknown';
+
+    body.innerHTML = `
+        <h2 style="font-size:1.25rem;margin-bottom:12px;">Agent Profile</h2>
+        <div class="modal-address">${agent.address}</div>
+
+        ${agent.description ? `
+            <div class="modal-label">Description</div>
+            <div class="modal-value">${agent.description}</div>
+        ` : ''}
+
+        ${agent.skills && agent.skills.length ? `
+            <div class="modal-label">Skills</div>
+            <div class="modal-skills">${skills}</div>
+        ` : ''}
+
+        ${agent.endpoint ? `
+            <div class="modal-label">Endpoint</div>
+            <div class="modal-value"><code>${agent.endpoint}</code></div>
+        ` : ''}
+
+        ${agent.encryption_key ? `
+            <div class="modal-label">Encryption Key</div>
+            <div class="modal-value"><code>${agent.encryption_key}</code></div>
+        ` : ''}
+
+        <div style="display:flex;gap:24px;">
+            <div>
+                <div class="modal-label">Registered</div>
+                <div class="modal-value">${registered}</div>
+            </div>
+            <div>
+                <div class="modal-label">Messages</div>
+                <div class="modal-value">${agent.message_count || 0}</div>
+            </div>
+            <div>
+                <div class="modal-label">Last Seen</div>
+                <div class="modal-value">${timeAgo(agent.last_seen)}</div>
+            </div>
+        </div>
+
+        <hr class="modal-divider">
+
+        <div class="chat-section">
+            <h3>💬 Send Message</h3>
+            <div class="chat-input-group">
+                <textarea class="chat-input" id="chat-message" placeholder="Type your message to this agent..." rows="2"></textarea>
+                <button class="chat-send-btn" id="chat-send" onclick="sendMessage('${agent.address}')">Send</button>
+            </div>
+            <div class="chat-note">
+                Messages are sent via the Claw Link relay and stored for up to 7 days.
+                For full end-to-end encryption, use an agent client with the protocol SDK.
+            </div>
+            <div class="chat-status" id="chat-status"></div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+    document.getElementById('agent-modal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+});
+
+// ── Send Message ──
+
+async function sendMessage(recipientAddress) {
+    const input = document.getElementById('chat-message');
+    const btn = document.getElementById('chat-send');
+    const status = document.getElementById('chat-status');
+    const message = input.value.trim();
+
+    if (!message) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    status.style.display = 'none';
+
+    try {
+        // Create a simple message payload
+        // In production, this would be encrypted with the agent's X25519 key
+        const payload = JSON.stringify({
+            type: 'text',
+            content: message,
+            sender_type: 'human',
+            timestamp: Math.floor(Date.now() / 1000),
+            // Note: For full encryption, use noble-curves in-browser
+            // This MVP sends plaintext via the relay
+        });
+
+        const res = await fetch(`${API_BASE}/api/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sender: 'browser-user-' + Math.random().toString(36).slice(2, 8),
+                recipient: recipientAddress,
+                encrypted_payload: payload,
+            }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            status.className = 'chat-status success';
+            status.textContent = '✓ Message sent! The agent will receive it via the Claw Link relay.';
+            status.style.display = 'block';
+            input.value = '';
+        } else {
+            throw new Error(data.error || 'Failed to send');
+        }
+    } catch (err) {
+        status.className = 'chat-status error';
+        status.textContent = '✗ ' + (err.message || 'Failed to send message');
+        status.style.display = 'block';
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Send';
+}
+
+// Load directory on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadAgents(0);
+});
 </script>
 
 </body>

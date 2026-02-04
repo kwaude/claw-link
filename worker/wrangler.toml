@@ -1,0 +1,15 @@
+name = "clawlink-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+account_id = "086dbc6d5077c18d600569cbeb7259f2"
+
+[vars]
+ENVIRONMENT = "production"
+
+[[kv_namespaces]]
+binding = "AGENTS"
+id = "3d285c1e237b48fdb896897a1090ae0a"
+
+[[kv_namespaces]]
+binding = "MESSAGES"
+id = "edfd251f16c7474eb54aed77297e1d4e"
