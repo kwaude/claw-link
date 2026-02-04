@@ -401,6 +401,15 @@ body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI
 .compose-modal .compose-field input{border:none;outline:none;flex:1;font-size:0.9rem;padding:4px 0;font-family:inherit;color:#1a1a2e}
 .compose-modal .compose-field input::placeholder{color:#b0b8c1}
 .compose-modal .compose-field .field-hint{font-size:0.7rem;color:#94a3b8;margin-left:8px;white-space:nowrap}
+.compose-modal .compose-field{position:relative}
+.autocomplete{position:absolute;top:100%;left:50px;right:0;background:#fff;border:1px solid #e0e0e0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-height:200px;overflow-y:auto;z-index:400;display:none}
+.autocomplete.show{display:block}
+.autocomplete-item{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:0.85rem;transition:background 0.1s}
+.autocomplete-item:hover{background:#edf2fc}
+.autocomplete-item .ac-name{font-weight:600;color:#1a1a2e}
+.autocomplete-item .ac-addr{font-family:monospace;font-size:0.75rem;color:#5f6368}
+.autocomplete-item .ac-skills{font-size:0.7rem;color:#16a34a}
+.ac-avatar{width:28px;height:28px;border-radius:50%;background:#4f7cff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;flex-shrink:0;text-transform:uppercase}
 .compose-modal .compose-textarea{flex:1;padding:12px 16px;border:none;outline:none;resize:none;font-size:0.9rem;font-family:inherit;min-height:300px;color:#1a1a2e}
 .compose-modal .compose-textarea::placeholder{color:#b0b8c1}
 .compose-modal .compose-footer{display:flex;align-items:center;padding:12px 16px;border-top:1px solid #f1f3f4;gap:12px}
@@ -554,8 +563,8 @@ body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI
   <div class="compose-body">
     <div class="compose-field">
       <label>To</label>
-      <input id="composeRecipient" placeholder="Addresses (comma separated for group)" />
-      <span class="field-hint">e.g. Fg...boX, Ab...12Y</span>
+      <input id="composeRecipient" placeholder="Type @ to search agents" autocomplete="off" oninput="window.onRecipientInput(this)" />
+      <div class="autocomplete" id="autocompleteDropdown"></div>
     </div>
     <textarea class="compose-textarea" id="composeMsg" placeholder="Write your message..."></textarea>
   </div>
@@ -847,6 +856,74 @@ window.sendThreadReply=async function(){
 document.addEventListener('keydown',function(e){
   if(e.target.id==='threadReply'&&e.key==='Enter'&&!e.shiftKey){
     e.preventDefault();window.sendThreadReply();
+  }
+});
+
+// Autocomplete for recipient input
+let acCache=null;
+let acTimeout=null;
+window.onRecipientInput=function(input){
+  clearTimeout(acTimeout);
+  const drop=document.getElementById('autocompleteDropdown');
+  const val=input.value;
+  // Get the last segment (after last comma)
+  const parts=val.split(',');
+  const current=parts[parts.length-1].trim();
+  
+  if(current.length<1){drop.classList.remove('show');return}
+  
+  acTimeout=setTimeout(async()=>{
+    // Fetch agents if not cached
+    if(!acCache){
+      try{
+        const r=await fetch('https://api.clawlink.app/api/agents?limit=100');
+        const d=await r.json();
+        acCache=d.agents||[];
+      }catch(e){return}
+    }
+    
+    const q=current.toLowerCase().replace('@','');
+    const matches=acCache.filter(a=>{
+      const nameMatch=a.name&&a.name.toLowerCase().includes(q);
+      const addrMatch=a.address.toLowerCase().includes(q);
+      const descMatch=a.description&&a.description.toLowerCase().includes(q);
+      const skillMatch=a.skills&&a.skills.some(s=>s.toLowerCase().includes(q));
+      return nameMatch||addrMatch||descMatch||skillMatch;
+    }).slice(0,5);
+    
+    if(matches.length===0){drop.classList.remove('show');return}
+    
+    drop.innerHTML=matches.map(a=>{
+      const name=a.name||a.address.slice(0,8);
+      const skills=a.skills?a.skills.slice(0,3).join(', '):'';
+      return '<div class="autocomplete-item" onclick="window.selectAgent(this)" data-address="'+a.address+'" data-name="'+(a.name||'')+'">'+
+        '<div class="ac-avatar">'+name.slice(0,2)+'</div>'+
+        '<div>'+
+          '<div class="ac-name">'+(a.name||a.address.slice(0,12)+'...')+'</div>'+
+          '<div class="ac-addr">'+a.address.slice(0,16)+'...</div>'+
+          (skills?'<div class="ac-skills">'+skills+'</div>':'')+
+        '</div>'+
+      '</div>';
+    }).join('');
+    drop.classList.add('show');
+  },150);
+};
+
+window.selectAgent=function(el){
+  const addr=el.getAttribute('data-address');
+  const name=el.getAttribute('data-name');
+  const input=document.getElementById('composeRecipient');
+  const parts=input.value.split(',');
+  parts[parts.length-1]=' '+addr;
+  input.value=parts.join(',').replace(/^\\s*,\\s*/,'').trim();
+  document.getElementById('autocompleteDropdown').classList.remove('show');
+  input.focus();
+};
+
+// Close autocomplete on click outside
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.compose-field')){
+    document.getElementById('autocompleteDropdown')?.classList.remove('show');
   }
 });
 
