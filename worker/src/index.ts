@@ -71,8 +71,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 h1{font-size:1.4rem;margin-bottom:8px}
 .msg-form{margin-top:20px}
 textarea{width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;resize:vertical;min-height:80px}
-button{margin-top:10px;padding:10px 24px;background:#4f7cff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600}
+button{margin-top:10px;padding:10px 24px;background:#4f7cff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;transition:all 0.2s}
 button:hover{background:#3b68e8}
+button:disabled{background:#94a3b8;cursor:not-allowed}
+textarea:disabled{background:#f1f5f9;color:#94a3b8}
 .status{margin-top:8px;padding:8px;border-radius:6px;font-size:0.85rem;display:none}
 .status.ok{display:block;background:#f0fdf4;color:#16a34a}
 .status.err{display:block;background:#fef2f2;color:#dc2626}
@@ -93,28 +95,75 @@ button:hover{background:#3b68e8}
     <div class="info-row"><span class="label">Encryption Key</span><span class="encrypt-key">${agent.encryption_key || 'not set'}</span></div>
   </div>
   <div class="msg-form">
-    <h3 style="margin-bottom:8px">Send a Message</h3>
+    <h3 style="margin-bottom:8px">Send a Message ${agent.encryption_key ? '<span style="font-size:0.75rem;color:#16a34a;font-weight:400">🔐 End-to-end encrypted</span>' : ''}</h3>
     <textarea id="msg" placeholder="Type your message..."></textarea>
-    <button onclick="sendMsg()">Send →</button>
+    <button id="sendBtn" onclick="window.sendMsg()">Send →</button>
     <div id="status" class="status"></div>
   </div>
   <div class="logo-link">Powered by <a href="https://clawlink.app">Claw Link</a></div>
 </div>
-<script>
-async function sendMsg(){
-  const msg=document.getElementById('msg').value.trim();
+<script type="module">
+import{x25519}from'https://esm.sh/@noble/curves@1.8.1/ed25519';
+import{xchacha20poly1305}from'https://esm.sh/@noble/ciphers@1.2.1/chacha';
+import{utf8ToBytes}from'https://esm.sh/@noble/ciphers@1.2.1/utils';
+import{hkdf}from'https://esm.sh/@noble/hashes@1.7.1/hkdf';
+import{sha256}from'https://esm.sh/@noble/hashes@1.7.1/sha256';
+
+const AGENT_ENC_KEY='${agent.encryption_key || ''}';
+
+function hexToBytes(h){const b=new Uint8Array(h.length/2);for(let i=0;i<h.length;i+=2)b[i/2]=parseInt(h.substr(i,2),16);return b}
+function bytesToHex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('')}
+function bytesToB64(b){return btoa(String.fromCharCode(...b))}
+
+async function encryptMessage(plaintext,agentPubKeyHex){
+  // Generate ephemeral X25519 keypair
+  const ephPriv=crypto.getRandomValues(new Uint8Array(32));
+  const ephPub=x25519.getPublicKey(ephPriv);
+  // ECDH shared secret
+  const agentPub=hexToBytes(agentPubKeyHex);
+  const shared=x25519.getSharedSecret(ephPriv,agentPub);
+  // Derive encryption key via HKDF
+  const key=hkdf(sha256,shared,new Uint8Array(0),'clawlink-e2e',32);
+  // Random nonce (24 bytes for XChaCha20)
+  const nonce=crypto.getRandomValues(new Uint8Array(24));
+  // Encrypt
+  const cipher=xchacha20poly1305(key,nonce);
+  const ct=cipher.encrypt(utf8ToBytes(plaintext));
+  return{
+    version:1,
+    ephemeral_pubkey:bytesToHex(ephPub),
+    nonce:bytesToB64(nonce),
+    ciphertext:bytesToB64(ct),
+    encrypted:true
+  };
+}
+
+window.sendMsg=async function(){
+  const ta=document.getElementById('msg');
+  const btn=document.getElementById('sendBtn');
   const status=document.getElementById('status');
+  const msg=ta.value.trim();
   if(!msg){status.className='status err';status.textContent='Please type a message';return}
+  btn.disabled=true;btn.textContent='Encrypting...';ta.disabled=true;status.className='status';status.style.display='none';
   try{
+    let payload;
+    if(AGENT_ENC_KEY&&AGENT_ENC_KEY.length===64){
+      payload=await encryptMessage(JSON.stringify({type:'text',content:msg,timestamp:Date.now(),from_human:true}),AGENT_ENC_KEY);
+      btn.textContent='Sending 🔐...';
+    }else{
+      payload={type:'text',content:msg,timestamp:Date.now(),from_human:true,encrypted:false};
+      btn.textContent='Sending...';
+    }
     const r=await fetch('https://api.clawlink.app/api/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({sender:'anonymous-human',recipient:'${agent.address}',encrypted_payload:JSON.stringify({type:'text',content:msg,timestamp:Date.now(),from_human:true})})
+      body:JSON.stringify({sender:'anonymous-human',recipient:'${agent.address}',encrypted_payload:JSON.stringify(payload)})
     });
-    if(r.ok){status.className='status ok';status.textContent='✅ Message sent!';document.getElementById('msg').value=''}
+    if(r.ok){status.className='status ok';status.textContent='✅ Message sent (end-to-end encrypted 🔐)';ta.value=''}
     else{const d=await r.json();status.className='status err';status.textContent='❌ '+d.error}
-  }catch(e){status.className='status err';status.textContent='❌ Failed to send'}
-}
+  }catch(e){console.error(e);status.className='status err';status.textContent='❌ Failed: '+e.message}
+  finally{btn.disabled=false;btn.textContent='Send →';ta.disabled=false;ta.focus()}
+};
 </script>
 </body>
 </html>`;
