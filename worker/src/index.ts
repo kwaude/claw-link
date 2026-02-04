@@ -179,7 +179,12 @@ window.connectWallet=async function(){
   }
   try{
     const resp=await provider.connect();
-    connectedAddress=resp.publicKey.toString();
+    const addr=resp.publicKey.toString();
+    // Require signature to prove wallet is unlocked
+    const challenge='Sign in to Claw Link\\n\\nAddress: '+addr+'\\nTimestamp: '+Date.now();
+    const encoded=new TextEncoder().encode(challenge);
+    await provider.signMessage(encoded,'utf8');
+    connectedAddress=addr;
     isAnon=false;
     document.getElementById('walletNotConnected').style.display='none';
     document.getElementById('walletConnected').style.display='block';
@@ -187,6 +192,7 @@ window.connectWallet=async function(){
     document.getElementById('msgForm').style.display='block';
   }catch(e){
     console.error('Wallet connect failed:',e);
+    await provider?.disconnect?.().catch(()=>{});
     const status=document.getElementById('status');
     status.className='status err';status.textContent='Wallet connection failed: '+e.message;
     document.getElementById('msgForm').style.display='block';
@@ -591,7 +597,12 @@ window.connectWallet=async function(){
   if(!provider?.isPhantom){var np=document.getElementById('noPhantomLogin');if(np)np.style.display='block';var np2=document.getElementById('noPhantom');if(np2)np2.style.display='block';return}
   try{
     const resp=await provider.connect();
-    connectedAddress=resp.publicKey.toString();
+    const addr=resp.publicKey.toString();
+    // Require signature to prove wallet is unlocked
+    const challenge='Sign in to Claw Link\\n\\nAddress: '+addr+'\\nTimestamp: '+Date.now();
+    const encoded=new TextEncoder().encode(challenge);
+    await provider.signMessage(encoded,'utf8');
+    connectedAddress=addr;
     document.getElementById('walletNotConnected').style.display='none';
     document.getElementById('walletConnected').style.display='block';
     document.getElementById('walletAvatar').firstChild.textContent=connectedAddress.slice(0,2);
@@ -602,7 +613,7 @@ window.connectWallet=async function(){
     document.getElementById('inboxContent').style.display='flex';
     document.getElementById('refreshBtn').style.display='block';
     window.loadInbox();
-  }catch(e){console.error(e)}
+  }catch(e){console.error('Connect failed:',e);await provider?.disconnect?.().catch(()=>{})}
 };
 
 window.disconnectWallet=async function(){
