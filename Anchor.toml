@@ -6,7 +6,7 @@ skip-lint = false
 
 [programs.devnet]
 claw_link_payments = "AV9QieTmdg2hFWsaZ3uTJRJuqqbhQCYFjn1fGiSYPTNe"
-clawlink_protocol = "EcXmncQ6pBhNfVKqKWufNNFKxQ7g84sVKcokukauZLqb"
+clawlink_protocol = "4t5tX2fELbKCEymX4KWEA3voWp1Fxe8fbfPP3xKtyNxR"
 
 [registry]
 url = "https://api.apr.dev"

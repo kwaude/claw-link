@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Mint, Burn};
 
-declare_id!("EcXmncQ6pBhNfVKqKWufNNFKxQ7g84sVKcokukauZLqb");
+declare_id!("4t5tX2fELbKCEymX4KWEA3voWp1Fxe8fbfPP3xKtyNxR");
 
 // ─── Constants ──────────────────────────────────────────────────────
 
