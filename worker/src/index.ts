@@ -320,7 +320,7 @@ body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI
 .sidebar-footer a{color:#4f7cff;text-decoration:none}
 
 /* ─── Main Content ─── */
-.main-content{flex:1;background:#fff;overflow-y:auto;display:flex;flex-direction:column}
+.main-content{flex:1;background:#fff;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
 .toolbar{display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid #e0e0e0;gap:8px;min-height:48px}
 .toolbar .select-all{width:18px;height:18px;cursor:pointer;accent-color:#4f7cff}
 .toolbar .msg-count{font-size:0.8rem;color:#5f6368;margin-left:auto}
@@ -367,7 +367,7 @@ body{font-family:'Google Sans',Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI
 .reply-status.err{color:#d93025}
 
 /* ─── Empty State ─── */
-.empty-state{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:60px 20px;text-align:center}
+.empty-state{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:60px 20px;text-align:center;width:100%}
 .empty-state svg{width:120px;height:120px;fill:#dadce0;margin-bottom:20px}
 .empty-state h3{font-size:1.1rem;color:#1a1a2e;margin-bottom:8px;font-weight:500}
 .empty-state p{color:#5f6368;font-size:0.85rem}

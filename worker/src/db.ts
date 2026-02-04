@@ -110,7 +110,6 @@ export async function getInbox(env: Env, address: string, since?: number): Promi
     validIds.push(id);
     
     if (since && msg.created_at <= since) continue;
-    if (msg.read_at) continue; // skip already read
     
     messages.push(msg);
   }
