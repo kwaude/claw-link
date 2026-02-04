@@ -6,7 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-clawlink_protocol = "PpQRJsqoLvrMspfw4zmnNQ4DbEnR4M47Ktw8jkYcCRM"
+clawlink_protocol = "4t5tX2fELbKCEymX4KWEA3voWp1Fxe8fbfPP3xKtyNxR"
+
+[programs.devnet]
+clawlink_protocol = "4t5tX2fELbKCEymX4KWEA3voWp1Fxe8fbfPP3xKtyNxR"
 
 [registry]
 url = "https://api.apr.dev"
